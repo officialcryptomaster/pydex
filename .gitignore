@@ -1,0 +1,17 @@
+#vim temp files
+.~
+*.swp
+*.swo
+
+# environment and packages
+pydex_env
+node_modules
+
+# python cache files
+*__pycache__*
+
+# database file
+pydex.db
+
+# log files
+*.log

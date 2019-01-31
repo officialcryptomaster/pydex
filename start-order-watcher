@@ -1,0 +1,22 @@
+if [[ ! -d ./node_modules ]]; then
+    yarn install
+fi;
+
+# export NETWORK_ID=50 # Ganache
+# export JSON_RPC_URL="http://localhost:8545" # default Ganache port
+export IS_VERBOSE=true
+# export EVENT_POLLING_INTERVAL_MS=
+# export EXPIRATION_MARGIN_MS=
+# export CLEANUP_JOB_INTERVAL_MS=
+
+alias get-order-watcher-pid="ps -aef | grep -v grep | grep 'order-watcher/lib/src/server.js' | tr -s ' ' | cut -d ' ' -f 4" 
+export ORDER_WATCHER_PID=`get-order-watcher-pid`
+
+if [[ $ORDER_WATCHER_PID ]]; then
+    echo "order-watcher is already running at process-id $ORDER_WATCHER_PID"
+else
+    echo "starting order watcher server..."
+    yarn start-order-watcher > order_watcher.log 2>&1 &
+    export ORDER_WATCHER_PID=`get-order-watcher-pid`
+    echo "order watcher successfully launched with proess-id $ORDER_WATCHER_PID" 
+fi

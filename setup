@@ -1,0 +1,18 @@
+if [[ -d ./node_modules ]]; then
+    echo "node_modules are already installed"
+else
+    yarn install
+fi;
+
+export PYDEX_ENV_NAME="./pydex_env"
+
+if [[ -d $PYDEX_ENV_NAME ]]; then
+    echo "python environment is already set up in $PYDEX_ENV_NAME"
+else
+    echo "setting up environment $PYDEX_ENV_NAME ..."
+    virtualenv -p python3 ./$PYDEX_ENV_NAME;
+    source $PYDEX_ENV_NAME/bin/activate;
+    pip3 install -r requirements.txt;
+fi;
+
+source $PYDEX_ENV_NAME/bin/activate
