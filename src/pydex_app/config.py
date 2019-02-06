@@ -4,7 +4,7 @@ import pydex_app.utils as pdu
 
 class PydexBaseConfig:
     SECRET_KEY = os.environ.get("SECRET_KEY", "development secret key is not safe")
-    SQLALCHEMY_DATABASE_URI = "sqlite:///pydex.db"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///../../pydex.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # PYDEX EXCHANGE PARAMS
     PYDEX_NETWORK_ID = "4"  # RINKEBY 
