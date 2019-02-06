@@ -30,6 +30,7 @@ class SignedOrder(db.Model):
     signature = db.Column(db.String(256), default="")
     bid_price = db.Column(db.String(128))
     ask_price = db.Column(db.String(128))
+    _sort_price = None
 
     def __repr__(self):
         return (
@@ -68,8 +69,8 @@ class SignedOrder(db.Model):
         return order
 
     def update_bid_ask_prices(self):
-        self.bid_price = self.get_bid_price(self)
-        self.ask_price = self.get_ask_price(self)
+        self.update_bid_price()
+        self.update_ask_price()
         return self
 
     def update_hash(self):
@@ -82,6 +83,36 @@ class SignedOrder(db.Model):
         """
         self.update_bid_ask_prices()
         self.update_hash()
+        return self
+
+    def update_bid_price(self, default_price=ZERO_STR):
+        """Bid price is price of taker asset per unit of maker asset
+        (i.e. price of taker asset which maker is bidding to buy)
+        """
+        try:
+            self.bid_price = "{:.0f}".format(
+                Decimal(order.taker_asset_price) / Decimal(order.maker_asset_price))
+        except:
+            self.ask_price = default_price
+        return self
+
+    def update_ask_price(self, default_price=MAX_INT_STR):
+        """Ask price is price of maker asset per unit of taker asset
+        (i.e. price of maker asset the maker is asking to sell)
+        """
+        try:
+            self.ask_price = "{:.0f}".format(
+                Decimal(self.maker_asset_price) / Decimal(self.taker_asset_price))
+        except:
+            self.ask_price = default_price
+        return self
+
+    def set_bid_as_sort_price(self):
+        self._sort_price = self.bid_price
+        return self
+
+    def set_ask_as_sort_price(self):
+        self._sort_price = self.ask_price
         return self
 
     @classmethod
@@ -121,7 +152,7 @@ class SignedOrder(db.Model):
 
     @classmethod
     def from_json(cls, order_json, check_validity=False):
-        order = SignedOrder()
+        order = cls()
         if check_validity:
             assert_valid(order_json, "/orderSchema")
         order.maker_address = order_json["makerAddress"]
@@ -139,21 +170,3 @@ class SignedOrder(db.Model):
         order.expiration_time_secs = order_json["expirationTimeSeconds"]
         order.update()
         return order
-
-    @staticmethod
-    def get_bid_price(order, default_price=ZERO_STR):
-        """ Bid price is price of taker asset per unit of maker asset"""
-        try:
-            return "{:.0f}".format(
-                Decimal(order.taker_asset_price) / Decimal(order.maker_asset_price))
-        except:
-            return default_price
-
-    @staticmethod
-    def get_ask_price(order, default_price=MAX_INT_STR):
-        """Ask price is price of maker asset per unit of taker asset"""
-        try:
-            return ":.0f".format(
-                Decimal(order.maker_asset_price) / Decimal(order.taker_asset_price))
-        except:
-            return default_price
