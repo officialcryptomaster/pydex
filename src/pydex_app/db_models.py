@@ -49,9 +49,8 @@ class SignedOrder(db.Model):
 
     def to_json(
         self,
-        include_signature=True,
         include_hash=False,
-        include_exchange_address=True,
+        include_signature=True,
     ):
         order = {
             "makerAddress": self.maker_address,
@@ -63,16 +62,17 @@ class SignedOrder(db.Model):
             "takerAssetAmount": self.taker_asset_amount,
             "makerAssetData": self.maker_asset_data,
             "takerAssetData": self.taker_asset_data,
+            "exchangeAddress": self.exchange_address,
             "salt": self.salt,
             "feeRecipientAddress": self.fee_recipient_address,
             "expirationTimeSeconds": self.expiration_time_secs,
         }
         if include_hash:
-            order["hash"] = self.hash or ""
+            if not self.hash:
+                self.update_hash()
+            order["hash"] = self.hash
         if include_signature:
-            order["signature"] = self.signature or ""
-        if include_exchange_address:
-            order["exchangeAddress"] = self.exchange_address or ""
+            order["signature"] = self.signature
         return order
 
     def update_bid_ask_prices(self):
@@ -152,7 +152,7 @@ class SignedOrder(db.Model):
             + keccak(to_bytes(hexstr=order.taker_asset_data))
         )
 
-        return keccak(
+        return "0x" + keccak(
             ou._Constants.eip191_header
             + eip712_domain_struct_hash
             + eip712_order_struct_hash
