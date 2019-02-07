@@ -41,10 +41,10 @@ def get_order_book():
     print("############ GETTING ORDER BOOK")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
-    page = request.args.get("page", app.config["OB_DEFAULT_PAGE"])
-    per_page = request.args.get("per_page", app.config["OB_DEFAULT_PER_PAGE"])
-    base_asset = request.args.get("baseAssetData")
-    quote_asset = request.args.get("quoteAssetData")
+    page = int(request.args.get("page", app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get("per_page", app.config["OB_DEFAULT_PER_PAGE"]))
+    base_asset = request.args["baseAssetData"]
+    quote_asset = request.args["quoteAssetData"]
     full_asset_set = request.args.get("fullSetAssetData")
     bids, tot_bid_count = OrderBook.get_bids(
         base_asset=base_asset,

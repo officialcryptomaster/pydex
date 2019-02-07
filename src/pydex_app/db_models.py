@@ -10,40 +10,45 @@ class SignedOrder(db.Model):
     # TODO(CM): consider using names which violate pep8 but make
     # it faster and easier to work with order_utils
     hash = db.Column(db.String(42), unique=True, primary_key=True)
-    maker_address = db.Column(db.String(42))
-    taker_address = db.Column(db.String(42))
+    maker_address = db.Column(db.String(42), nullable=False)
+    taker_address = db.Column(db.String(42), default=ou._Constants.null_address)
     # TODO(CM): Is 32 chars enough for fees?
-    maker_fee = db.Column(db.String(32))
-    taker_fee = db.Column(db.String(32))
-    sender_address = db.Column(db.String(42))
-    maker_asset_amount = db.Column(db.String(128))
-    taker_asset_amount = db.Column(db.String(128))
+    maker_fee = db.Column(db.String(32), default="0")
+    taker_fee = db.Column(db.String(32), default="0")
+    sender_address = db.Column(db.String(42), default=ou._Constants.null_address)
+    maker_asset_amount = db.Column(db.String(128), nullable=False)
+    taker_asset_amount = db.Column(db.String(128), nullable=False)
     # TODO(CM): Is 128 chars enough for asset data?
-    maker_asset_data = db.Column(db.String(128))
-    taker_asset_data = db.Column(db.String(128))
+    maker_asset_data = db.Column(db.String(128), nullable=False)
+    taker_asset_data = db.Column(db.String(128), nullable=False)
     # TODO(CM): Is 128 chars too much for the salt?
-    salt = db.Column(db.String(128))
-    exchange_address = db.Column(db.String(42))
-    fee_recipient_address = db.Column(db.String(42))
-    expiration_time_secs = db.Column(db.Integer)
+    salt = db.Column(db.String(128), nullable=False)
+    exchange_address = db.Column(db.String(42), nullable=False)
+    fee_recipient_address = db.Column(db.String(42), default=ou._Constants.null_address)
+    expiration_time_secs = db.Column(db.Integer, nullable=False)
     # TODO(CM): Is 256 chars too much for the signature?
-    signature = db.Column(db.String(256), default="")
+    signature = db.Column(db.String(256), nullable=False)
     bid_price = db.Column(db.String(128))
     ask_price = db.Column(db.String(128))
     _sort_price = None
 
     def __repr__(self):
         return (
-            f"[SignedOrder](hash={self.hash} | exchange_address={self.exchange_address}"
-            f" | maker_Address={self.maker_address} | taker_address={self.taker_address})"
+            f"[SignedOrder](hash={self.hash}"
+            f" | maker_asset_amount={self.maker_asset_amount}"
+            f" | taker_asset_amount={self.taker_asset_amount}"
+            f" | maker_asset_data={self.maker_asset_data}"
+            f" | taker_asset_data={self.taker_asset_data}"
+            f" | maker_address={self.maker_address}"
+            f" | taker_address={self.taker_address}"
         )
 
     __str__ = __repr__
 
     def to_json(
         self,
+        include_signature=True,
         include_hash=False,
-        include_signature=False,
         include_exchange_address=True,
     ):
         order = {
@@ -90,10 +95,11 @@ class SignedOrder(db.Model):
         (i.e. price of taker asset which maker is bidding to buy)
         """
         try:
-            self.bid_price = "{:.0f}".format(
-                Decimal(order.taker_asset_price) / Decimal(order.maker_asset_price))
+            self.bid_price = "{:.18f}".format(
+                Decimal(self.taker_asset_amount) / Decimal(self.maker_asset_amount))
         except:
-            self.ask_price = default_price
+            print()
+            self.bid_price = default_price
         return self
 
     def update_ask_price(self, default_price=MAX_INT_STR):
@@ -101,8 +107,8 @@ class SignedOrder(db.Model):
         (i.e. price of maker asset the maker is asking to sell)
         """
         try:
-            self.ask_price = "{:.0f}".format(
-                Decimal(self.maker_asset_price) / Decimal(self.taker_asset_price))
+            self.ask_price = "{:.18f}".format(
+                Decimal(self.maker_asset_amount) / Decimal(self.taker_asset_amount))
         except:
             self.ask_price = default_price
         return self
@@ -154,7 +160,7 @@ class SignedOrder(db.Model):
     def from_json(cls, order_json, check_validity=False):
         order = cls()
         if check_validity:
-            assert_valid(order_json, "/orderSchema")
+            assert_valid(order_json, "/signedOrderSchema")
         order.maker_address = order_json["makerAddress"]
         order.taker_address = order_json["takerAddress"]
         order.maker_fee = order_json["makerFee"]
@@ -168,5 +174,6 @@ class SignedOrder(db.Model):
         order.exchange_address = order_json["exchangeAddress"]
         order.fee_recipient_address = order_json["feeRecipientAddress"]
         order.expiration_time_secs = order_json["expirationTimeSeconds"]
+        order.signature = order_json["signature"]
         order.update()
         return order
