@@ -35,6 +35,8 @@ class SignedOrder(db.Model):
     def __repr__(self):
         return (
             f"[SignedOrder](hash={self.hash}"
+            f" | bid_price={self.bid_price}"
+            f" | ask_price={self.ask_price}"
             f" | maker_asset_amount={self.maker_asset_amount}"
             f" | taker_asset_amount={self.taker_asset_amount}"
             f" | maker_asset_data={self.maker_asset_data}"

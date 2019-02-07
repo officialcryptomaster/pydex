@@ -32,7 +32,7 @@ class OrderBook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=quote_asset, quote_asset=base_asset,
+                maker_asset=quote_asset, taker_asset=base_asset,
                 full_asset_set=full_asset_set
             )
             eq_asks = SignedOrder.query.filter_by(
@@ -69,7 +69,7 @@ class OrderBook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=base_asset, quote_asset=quote_asset,
+                maker_asset=base_asset, taker_asset=quote_asset,
                 full_asset_set=full_asset_set
             )
             eq_bids = SignedOrder.query.filter_by(
@@ -110,7 +110,7 @@ class OrderBook:
                 maker_asset = short_asset
             elif taker_asset == short_asset:
                 taker_asset = maker_asset
-                maker_asset == long_asset
+                maker_asset = long_asset
             else:
                 raise ValueError(
                     "Neither make or taker assets matched the assets provided"

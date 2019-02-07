@@ -46,6 +46,8 @@ def get_order_book():
     base_asset = request.args["baseAssetData"]
     quote_asset = request.args["quoteAssetData"]
     full_asset_set = request.args.get("fullSetAssetData")
+    if full_asset_set:
+        full_asset_set = json.loads(full_asset_set)
     bids, tot_bid_count = OrderBook.get_bids(
         base_asset=base_asset,
         quote_asset=quote_asset,

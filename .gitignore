@@ -1,7 +1,10 @@
-#vim temp files
+# vim temp files
 .~
 *.swp
 *.swo
+
+# notebook checkpoints
+notebooks/.ipynb_checkpoints/*
 
 # environment and packages
 pydex_env
