@@ -42,7 +42,8 @@ def get_order_book():
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     page = int(request.args.get("page", app.config["OB_DEFAULT_PAGE"]))
-    per_page = int(request.args.get("per_page", app.config["OB_DEFAULT_PER_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", app.config["OB_DEFAULT_PER_PAGE"]))
     base_asset = request.args["baseAssetData"]
     quote_asset = request.args["quoteAssetData"]
     full_asset_set = request.args.get("fullSetAssetData")
