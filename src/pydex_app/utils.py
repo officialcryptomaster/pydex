@@ -7,7 +7,7 @@ MAX_INT_STR = "{:.0f}".format(MAX_INT)
 
 
 def to_base_unit_amount(amount, decimals=18):
-    return "{:f}".format(Decimal(amount) ** decimals)
+    return "{:.0f}".format(Decimal(amount) * 10 ** decimals)
 
 def paginate(arr, page=1, per_page=20):
     page_idx = page - 1

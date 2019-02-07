@@ -16,7 +16,7 @@ class OrderWatcherClient:
         on_msg=None,
         on_error=None,
         on_close=None,
-        enable_trace=True,
+        enable_trace=False,
     ):
         self.url = url
         self.on_open = on_open or self.on_open_default
@@ -92,7 +92,7 @@ class OrderWatcherClient:
             "method": method,
         }
         if params:
-            msg_json[params] = params
+            msg_json["params"] = params
         logger.debug("sending... {}".format(msg_json))
         ws = websocket.create_connection(self.url)
         ws.send(json.dumps(msg_json))
