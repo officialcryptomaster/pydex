@@ -2,6 +2,7 @@ from pydex_app import app, db
 from flask import request
 from flask_cors import cross_origin
 from pydex_app.db_models import SignedOrder
+from pydex_app.orderbook import OrderBook
 from zero_ex import order_utils as ou
 from zero_ex.json_schemas import assert_valid
 import pydex_app.utils as pdu
@@ -38,35 +39,44 @@ def get_orders():
 @cross_origin()
 def get_order_book():
     print("############ GETTING ORDER BOOK")
-    maker_asset_data = request.args.get("baseAssetData")
-    taker_asset_data = request.args.get("quoteAssetData")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
-    page = request.args.get("page", app.config["OB_DEFAULT_PAGE"])
-    per_page = request.args.get("per_page", app.config["OB_DEFAULT_PER_PAGE"])
-    bids = SignedOrder.query.filter_by(
-        maker_asset_data=taker_asset_data, taker_asset_data=maker_asset_data
-    ).order_by(SignedOrder.bid_price.desc())
-    asks = SignedOrder.query.filter_by(
-        maker_asset_data=maker_asset_data, taker_asset_data=taker_asset_data
-    ).order_by(SignedOrder.ask_price)
+    page = int(request.args.get("page", app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get("per_page", app.config["OB_DEFAULT_PER_PAGE"]))
+    base_asset = request.args["baseAssetData"]
+    quote_asset = request.args["quoteAssetData"]
+    full_asset_set = request.args.get("fullSetAssetData")
+    if full_asset_set:
+        full_asset_set = json.loads(full_asset_set)
+    bids, tot_bid_count = OrderBook.get_bids(
+        base_asset=base_asset,
+        quote_asset=quote_asset,
+        full_asset_set=full_asset_set,
+        page=page,
+        per_page=per_page)
+    asks, tot_ask_count = OrderBook.get_asks(
+        base_asset=base_asset,
+        quote_asset=quote_asset,
+        full_asset_set=full_asset_set,
+        page=page,
+        per_page=per_page)
     res = {
         "bids": {
-            "total": bids.count(),
+            "total": tot_bid_count,
             "perPage": per_page,
             "page": page,
             "records": [
                 {"order": bid.to_json(), "metaData": {}}
-                for bid in bids.paginate(page=1, per_page=per_page).items
+                for bid in bids
             ],
         },
         "asks": {
-            "total": asks.count(),
+            "total": tot_ask_count,
             "perPage": per_page,
             "page": page,
             "records": [
                 {"order": ask.to_json(), "metaData": {}}
-                for ask in asks.paginate(page=1, per_page=per_page).items
+                for ask in asks
             ],
         }
     }
