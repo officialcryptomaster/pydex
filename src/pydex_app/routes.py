@@ -3,7 +3,7 @@ from flask import request
 from flask_cors import cross_origin
 from pydex_app.db_models import SignedOrder
 from pydex_app.orderbook import OrderBook
-from zero_ex import order_utils as ou
+from pydex_app.config import NULL_ADDRESS
 from zero_ex.json_schemas import assert_valid
 import pydex_app.utils as pdu
 import json
@@ -94,7 +94,7 @@ def post_order_config():
     order = request.json
     assert_valid(order, "/orderConfigRequestSchema")
     res = {
-        "senderAddress": ou._Constants.null_address,
+        "senderAddress": NULL_ADDRESS,
         "feeRecipientAddress": app.config["PYDEX_ZRX_FEE_RECIPIENT"],
         "makerFee": app.config["PYDEX_ZRX_MAKER_FEE"],
         "takerFee": app.config["PYDEX_ZRX_TAKER_FEE"],

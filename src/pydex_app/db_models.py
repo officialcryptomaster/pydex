@@ -1,9 +1,38 @@
 from pydex_app import db
 from zero_ex.json_schemas import assert_valid
-from zero_ex import order_utils as ou
+from pydex_app.config import NULL_ADDRESS
 from pydex_app.utils import ZERO_STR, MAX_INT_STR
 from eth_utils import keccak, remove_0x_prefix, to_bytes
 from decimal import Decimal
+
+eip191_header = b"\x19\x01"
+
+eip712_domain_separator_schema_hash = keccak(
+    b"EIP712Domain(string name,string version,address verifyingContract)"
+)
+
+eip712_order_schema_hash = keccak(
+    b"Order("
+    + b"address makerAddress,"
+    + b"address takerAddress,"
+    + b"address feeRecipientAddress,"
+    + b"address senderAddress,"
+    + b"uint256 makerAssetAmount,"
+    + b"uint256 takerAssetAmount,"
+    + b"uint256 makerFee,"
+    + b"uint256 takerFee,"
+    + b"uint256 expirationTimeSeconds,"
+    + b"uint256 salt,"
+    + b"bytes makerAssetData,"
+    + b"bytes takerAssetData"
+    + b")"
+)
+
+eip712_domain_struct_header = (
+    eip712_domain_separator_schema_hash
+    + keccak(b"0x Protocol")
+    + keccak(b"2")
+)
 
 
 class SignedOrder(db.Model):
@@ -11,11 +40,11 @@ class SignedOrder(db.Model):
     # it faster and easier to work with order_utils
     hash = db.Column(db.String(42), unique=True, primary_key=True)
     maker_address = db.Column(db.String(42), nullable=False)
-    taker_address = db.Column(db.String(42), default=ou._Constants.null_address)
+    taker_address = db.Column(db.String(42), default=NULL_ADDRESS)
     # TODO(CM): Is 32 chars enough for fees?
     maker_fee = db.Column(db.String(32), default="0")
     taker_fee = db.Column(db.String(32), default="0")
-    sender_address = db.Column(db.String(42), default=ou._Constants.null_address)
+    sender_address = db.Column(db.String(42), default=NULL_ADDRESS)
     maker_asset_amount = db.Column(db.String(128), nullable=False)
     taker_asset_amount = db.Column(db.String(128), nullable=False)
     # TODO(CM): Is 128 chars enough for asset data?
@@ -24,7 +53,7 @@ class SignedOrder(db.Model):
     # TODO(CM): Is 128 chars too much for the salt?
     salt = db.Column(db.String(128), nullable=False)
     exchange_address = db.Column(db.String(42), nullable=False)
-    fee_recipient_address = db.Column(db.String(42), default=ou._Constants.null_address)
+    fee_recipient_address = db.Column(db.String(42), default=NULL_ADDRESS)
     expiration_time_secs = db.Column(db.Integer, nullable=False)
     # TODO(CM): Is 256 chars too much for the signature?
     signature = db.Column(db.String(256), nullable=False)
@@ -132,12 +161,12 @@ class SignedOrder(db.Model):
             return i.to_bytes(32, byteorder="big")
 
         eip712_domain_struct_hash = keccak(
-            ou._Constants.eip712_domain_struct_header
+            eip712_domain_struct_header
             + pad_20_bytes_to_32(to_bytes(hexstr=order.exchange_address))
         )
 
         eip712_order_struct_hash = keccak(
-            ou._Constants.eip712_order_schema_hash
+            eip712_order_schema_hash
             + pad_20_bytes_to_32(to_bytes(hexstr=order.maker_address))
             + pad_20_bytes_to_32(to_bytes(hexstr=order.taker_address))
             + pad_20_bytes_to_32(to_bytes(hexstr=order.fee_recipient_address))
@@ -153,7 +182,7 @@ class SignedOrder(db.Model):
         )
 
         return "0x" + keccak(
-            ou._Constants.eip191_header
+            eip191_header
             + eip712_domain_struct_hash
             + eip712_order_struct_hash
         ).hex()
