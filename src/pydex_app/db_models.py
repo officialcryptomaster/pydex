@@ -188,7 +188,7 @@ class SignedOrder(db.Model):
         ).hex()
 
     @classmethod
-    def from_json(cls, order_json, check_validity=False):
+    def from_json(cls, order_json, check_validity=False, include_signature=True):
         order = cls()
         if check_validity:
             assert_valid(order_json, "/signedOrderSchema")
@@ -205,6 +205,7 @@ class SignedOrder(db.Model):
         order.exchange_address = order_json["exchangeAddress"]
         order.fee_recipient_address = order_json["feeRecipientAddress"]
         order.expiration_time_secs = order_json["expirationTimeSeconds"]
-        order.signature = order_json["signature"]
+        if include_signature:
+            order.signature = order_json["signature"]
         order.update()
         return order

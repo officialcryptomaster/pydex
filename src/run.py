@@ -9,9 +9,7 @@ from pydex_app.utils import setup_logger
 if __name__ == "__main__":
     db.create_all()
     
-    l = setup_logger("app","app.log")
-    app.logger = l
+    app.logger = setup_logger("app","app.log")
     app.logger.info("startup pydex")
 
     app.run(host="0.0.0.0", port=3000, debug=True)
-
