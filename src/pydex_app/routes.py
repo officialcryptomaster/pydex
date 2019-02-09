@@ -7,30 +7,27 @@ from pydex_app.config import NULL_ADDRESS
 from zero_ex.json_schemas import assert_valid
 import pydex_app.utils as pdu
 import json
+from flask import render_template
 
 
 @app.route("/")
 def hello():
-    return """
-    <div>
-        <h1>PyDEX Relayer</h1>
-        <a href="http://sra-spec.s3-website-us-east-1.amazonaws.com">
-            Check API reference...
-        </a>
-    </div>
-    """
+    app.logger.info("hello")
+    return render_template('base.html')
 
 # GET AssetPairs endpoint retrieves a list of available asset pairs and the information required to trade them.
 # http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getAssetPairs
 @app.route("/v2/asset_pairs", methods=["GET"])
 @cross_origin()
 def get_asset_pairs():
+    app.logger.error("not implemented")
     raise NotImplementedError()
 
 # GET Orders endpoint retrieves a list of orders given query parameters.
 # http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
 @app.route("/v2/orders", methods=["GET"])
 def get_orders():
+    app.logger.error("not implemented")
     raise NotImplementedError()
 
 # GET Orderbook endpoint retrieves the orderbook for a given asset pair.
@@ -38,7 +35,7 @@ def get_orders():
 @app.route('/v2/orderbook', methods=["GET"])
 @cross_origin()
 def get_order_book():
-    print("############ GETTING ORDER BOOK")
+    app.logger.info("############ GETTING ORDER BOOK")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     page = int(request.args.get("page", app.config["OB_DEFAULT_PAGE"]))
@@ -88,7 +85,7 @@ def get_order_book():
 @app.route('/v2/order_config', methods=["POST"])
 @cross_origin()
 def post_order_config():
-    print("############ GETTING ORDER CONFIG")
+    app.logger.info("############ GETTING ORDER CONFIG")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     order = request.json
@@ -112,8 +109,8 @@ def get_post_recipients():
 @app.route('/v2/order', methods=["POST"])
 @cross_origin()
 def post_order():
-    print("############ POSTING ORDER")
-    print(request.json)
+    app.logger.info("############ POSTING ORDER")
+    app.logger.info(request.json)
     order = SignedOrder.from_json(request.json, check_validity=True)
     db.session.add(order)
     db.session.commit()
