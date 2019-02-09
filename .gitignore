@@ -18,3 +18,5 @@ pydex.db
 
 # log files
 *.log
+
+.cache/
