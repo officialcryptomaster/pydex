@@ -1,17 +1,25 @@
-from pydex_app import db
-from zero_ex.json_schemas import assert_valid
-from pydex_app.config import NULL_ADDRESS
-from pydex_app.utils import ZERO_STR, MAX_INT_STR
-from eth_utils import keccak, remove_0x_prefix, to_bytes
+"""
+Database models of common objects
+
+author: officialcryptomaster@gmail.com
+"""
 from decimal import Decimal
+from eth_utils import keccak, to_bytes
+from zero_ex.json_schemas import assert_valid
+from pydex_app import db
+from pydex_app.constants import NULL_ADDRESS
+from pydex_app.constants import ZERO_STR, MAX_INT_STR
 
-eip191_header = b"\x19\x01"
 
-eip712_domain_separator_schema_hash = keccak(
+eip191_header = b"\x19\x01"  # pylint: disable=invalid-name
+
+
+eip712_domain_separator_schema_hash = keccak(  # pylint: disable=invalid-name
     b"EIP712Domain(string name,string version,address verifyingContract)"
 )
 
-eip712_order_schema_hash = keccak(
+
+eip712_order_schema_hash = keccak(  # pylint: disable=invalid-name
     b"Order("
     + b"address makerAddress,"
     + b"address takerAddress,"
@@ -28,7 +36,8 @@ eip712_order_schema_hash = keccak(
     + b")"
 )
 
-eip712_domain_struct_header = (
+
+eip712_domain_struct_header = (  # pylint: disable=invalid-name
     eip712_domain_separator_schema_hash
     + keccak(b"0x Protocol")
     + keccak(b"2")
@@ -36,30 +45,37 @@ eip712_domain_struct_header = (
 
 
 class SignedOrder(db.Model):
-    # TODO(CM): consider using names which violate pep8 but make
+    """SignedOrder model which provides persistence and convenience
+    methods around dealing with 0x SignedOrder type
+    """
     # it faster and easier to work with order_utils
-    hash = db.Column(db.String(42), unique=True, primary_key=True)
-    maker_address = db.Column(db.String(42), nullable=False)
-    taker_address = db.Column(db.String(42), default=NULL_ADDRESS)
-    # TODO(CM): Is 32 chars enough for fees?
-    maker_fee = db.Column(db.String(32), default="0")
-    taker_fee = db.Column(db.String(32), default="0")
-    sender_address = db.Column(db.String(42), default=NULL_ADDRESS)
-    maker_asset_amount = db.Column(db.String(128), nullable=False)
-    taker_asset_amount = db.Column(db.String(128), nullable=False)
-    # TODO(CM): Is 128 chars enough for asset data?
-    maker_asset_data = db.Column(db.String(128), nullable=False)
-    taker_asset_data = db.Column(db.String(128), nullable=False)
-    # TODO(CM): Is 128 chars too much for the salt?
-    salt = db.Column(db.String(128), nullable=False)
-    exchange_address = db.Column(db.String(42), nullable=False)
-    fee_recipient_address = db.Column(db.String(42), default=NULL_ADDRESS)
-    expiration_time_secs = db.Column(db.Integer, nullable=False)
-    # TODO(CM): Is 256 chars too much for the signature?
-    signature = db.Column(db.String(256), nullable=False)
-    bid_price = db.Column(db.String(128))
-    ask_price = db.Column(db.String(128))
-    _sort_price = None
+    hash = db.Column(db.String(42), unique=True, primary_key=True)  # pylint: disable=no-member
+    maker_address = db.Column(db.String(42), nullable=False)  # pylint: disable=no-member
+    taker_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
+    maker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
+    taker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
+    sender_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
+    maker_asset_amount = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
+    taker_asset_amount = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
+    maker_asset_data = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
+    taker_asset_data = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
+    salt = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
+    exchange_address = db.Column(db.String(42), nullable=False)  # pylint: disable=no-member
+    fee_recipient_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
+    expiration_time_secs = db.Column(db.Integer, nullable=False)  # pylint: disable=no-member
+    signature = db.Column(db.String(256), nullable=False)  # pylint: disable=no-member
+    bid_price = db.Column(db.String(128))  # pylint: disable=no-member
+    ask_price = db.Column(db.String(128))  # pylint: disable=no-member
+    _sort_price = None  # not a DB
+
+    @property
+    def sort_price(self):
+        """Get a price for sorting orders
+        This is useful for full set order which result in a mix of bids and asks
+        (hint: make use of `set_bid_price_as_sort_price` and its equivalent
+        `set_bid_price_as_sort_price`)
+        """
+        return self._sort_price
 
     def __repr__(self):
         return (
@@ -81,6 +97,8 @@ class SignedOrder(db.Model):
         include_hash=False,
         include_signature=True,
     ):
+        """Get a json representation of the SignedOrder
+        """
         order = {
             "makerAddress": self.maker_address,
             "takerAddress": self.taker_address,
@@ -105,11 +123,14 @@ class SignedOrder(db.Model):
         return order
 
     def update_bid_ask_prices(self):
+        """Update the bid and ask prices and return the order for chaining"""
         self.update_bid_price()
         self.update_ask_price()
         return self
 
     def update_hash(self):
+        """Update the hash of the order and return the order for chaining
+        """
         self.hash = self.get_order_hash_hex(self)
         return self
 
@@ -128,8 +149,7 @@ class SignedOrder(db.Model):
         try:
             self.bid_price = "{:.18f}".format(
                 Decimal(self.taker_asset_amount) / Decimal(self.maker_asset_amount))
-        except:
-            print()
+        except:  # noqa E722 pylint: disable=bare-except
             self.bid_price = default_price
         return self
 
@@ -140,20 +160,28 @@ class SignedOrder(db.Model):
         try:
             self.ask_price = "{:.18f}".format(
                 Decimal(self.maker_asset_amount) / Decimal(self.taker_asset_amount))
-        except:
+        except:  # noqa E722 pylint: disable=bare-except
             self.ask_price = default_price
         return self
 
     def set_bid_as_sort_price(self):
+        """Set the self._sort_price field to be the self.bid_price
+        This can be useful for sorting full set orders
+        """
         self._sort_price = self.bid_price
         return self
 
     def set_ask_as_sort_price(self):
+        """Set the self._sort_price field to be the self.ask_price
+        This can be useful for sorting full set orders
+        """
         self._sort_price = self.ask_price
         return self
 
     @classmethod
     def get_order_hash_hex(cls, order):
+        """Calculate hash of an order as per 0x specification
+        """
         def pad_20_bytes_to_32(twenty_bytes: bytes):
             return bytes(12) + twenty_bytes
 
@@ -189,6 +217,8 @@ class SignedOrder(db.Model):
 
     @classmethod
     def from_json(cls, order_json, check_validity=False):
+        """Given a json
+        """
         order = cls()
         if check_validity:
             assert_valid(order_json, "/signedOrderSchema")

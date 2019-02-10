@@ -1,13 +1,28 @@
-import time
-import websocket
+"""
+OrderWatcherClient is the client responsible for registering orders with the
+0x order-watcher server
+
+author: officialcryptomaster@gmail.com
+"""
+
 import json
 import logging
+
 from threading import Thread
 
-logger = logging.getLogger(__name__)
+import websocket
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OrderWatcherClient:
+    """OrderWatcherClient is for listening to order-watcher-server service.
+    Currently, there is no equivalent of the 0x-order-watcher object in python.
+    The typescript library does have a server which provides an RPC interface.
+    This class is meant to be the client which registers orders with the server
+    and listens to status updates. It has apprpriate hooks which can be used to
+    perform orderbook updates.
+    """
 
     def __init__(
         self,
@@ -18,16 +33,27 @@ class OrderWatcherClient:
         on_close=None,
         enable_trace=False,
     ):
+        """
+        Keyword arguments:
+        url -- string url and port where order-watcher-server is running the json
+            RPC service
+        on_open -- function hook for when the web socket connection is first
+            established
+        on_msg -- function hook for when updates are sent from the server
+        on_error -- function hook for an error occurs in the web socket
+        on_close -- function hook for when web socket is closed down
+        enable_trace -- boolean indicating whether the web socket should have
+            verbose debug information (default: False)
+        """
         self.url = url
-        self.on_open = on_open or self.on_open_default
-        self.on_msg = on_msg or self.on_msg_default
-        self.on_error = on_error or self.on_error_default
-        self.on_close = on_close or self.on_close_default
-        self.on_open = on_open or self.on_open_default
+        self.on_open = on_open
+        self.on_msg = on_msg
+        self.on_error = on_error
+        self.on_close = on_close
         self.enable_trace = enable_trace
-        self.ws = websocket.WebSocketApp(
+        self.websoc = websocket.WebSocketApp(
             url=self.url,
-            on_open=self.on_open,
+            on_open=on_open,
             on_message=on_msg,
             on_error=on_error,
             on_close=on_close
@@ -36,55 +62,41 @@ class OrderWatcherClient:
         self._th = None
 
     def run(self):
+        """Run an instance of the order-watcher-client in a separate thread
+        """
         if self._th:
-            logger.info("Already running...")
+            LOGGER.info("Already running...")
             return
         websocket.enableTrace(self.enable_trace)
-        self._th = Thread(target=self.ws.run_forever)
-        logger.debug(
-            "Starting web socket client in thread {}...".format(self._th))
+        self._th = Thread(target=self.websoc.run_forever)
+        LOGGER.debug(
+            "Starting web socket client in thread %s...", self._th)
         self._th.start()
 
     def stop(self):
-        self.ws.close()
+        """Force the websocket to close and the background thread to stop"""
+        self.websoc.close()
         self._th = None
 
     def join(self):
+        """Wait for websocket
+        Note that the background thread will run until you call `stop()` on
+        the client.
+        """
         if self._th:
             self._th.join()
 
-    def get_stats(self):
-        return self._rpc(method="GET_STATS")
-
-    def on_open_default(self, *args, **kwargs):
-        logger.info("### open ###")
+    def on_open_default(self, *args, **kwargs):  # pylint: disable=unused-argument
+        """Default on_open function just gets number of order being watched by
+        the server.
+        """
+        LOGGER.info("### open ###")
         stats = self.get_stats()
-        logger.info("Got stats: {}".format(stats.get("result")))
+        LOGGER.info("Got stats: %s", stats.get("result"))
 
-    def on_msg_default(self, msg):
-        if not isinstance(msg, dict):
-            try:
-                msg = json.loads(msg)
-            except Exception:
-                logger.exception(
-                    "Error in parsing message. Expected valid json, but got:\n{}\n".format(msg))
-                return
-        res = msg.get("result")
-        if not res:
-            logger.error(
-                "Error in rpc message... missing 'result' key... {}".format(msg))
-            return
-        # TODO: handle the different message types
-        logger.info(msg)
-        return msg
-
-    def on_error_default(self, ws, error):
-        logger.error(error)
-
-    def on_close_default(self, ws):
-        logger.info("### closed ###")
-
-    def _rpc(self, method, params=None, on_msg=None, on_err=None):
+    def _rpc(self, method, params=None, on_msg=None, on_error=None):
+        """Remote Procedure Call handler
+        """
         new_id = self._msg_id + 1
         msg_json = {
             "id": new_id,
@@ -93,43 +105,71 @@ class OrderWatcherClient:
         }
         if params:
             msg_json["params"] = params
-        logger.debug("sending... {}".format(msg_json))
-        ws = websocket.create_connection(self.url)
-        ws.send(json.dumps(msg_json))
+        LOGGER.debug("sending... %s", msg_json)
+        websoc = websocket.create_connection(self.url)
+        websoc.send(json.dumps(msg_json))
         self._msg_id = new_id + 1
-        logger.debug("receiving...")
-        res = ws.recv()
-        logger.debug("received {}".format(res))
+        LOGGER.debug("receiving...")
+        res = websoc.recv()
+        LOGGER.debug("received %s", res)
+        on_msg = on_msg or self.on_msg
+        on_error = on_error or self.on_error
         if not isinstance(res, dict):
             try:
                 res = json.loads(res)
-            except Exception:
-                logger.exception(
+            except (json.decoder.JSONDecodeError, TypeError):
+                LOGGER.exception(
                     "Result of send was not valid json. original message was:\n{}\n")
-                self.on_error(res)
-                return
-        on_msg = on_msg or self.on_msg
-        return self.on_msg(res)
+                if on_error:
+                    return on_error(res)
+                return None
+        if on_msg:
+            return on_msg(res)
+        return None
 
-    def add_order(self, order_hash):
-        pass
+    def get_stats(self):
+        """Get number of orders being watched by the server"""
+        return self._rpc(method="GET_STATS")
+
+    def add_order(self, signed_order):
+        """Add an order to the server's watch list
+
+        Keyword arguments:
+        signed_order: dict of a signedOrder
+        """
+        self._rpc(
+            method="ADD_ORDER",
+            params={"signedOrder": signed_order})
+
+    def remove_order(self, order_hash):
+        """Remove an order from the server's watch list
+
+        Keyword arguments:
+        order_hash: string hex hash of signed order
+        """
+        self._rpc(
+            method="REMOVE_ORDER",
+            params={"orderHash": order_hash})
 
 
 if __name__ == "__main__":
     # create console handler and set level to debug
-    logger.setLevel(logging.DEBUG)
+    LOGGER.setLevel(logging.DEBUG)
     # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    console_handler = logging.StreamHandler()  # pylint: disable=invalid-name
+    console_handler.setLevel(logging.DEBUG)
     # create formatter
-    formatter = logging.Formatter(
+    formatter = logging.Formatter(  # pylint: disable=invalid-name
         "%(asctime)s.%(msecs)03d - %(funcName)20s() - %(levelname)s - %(message)s",
         "%m-%d %H:%M:%S")
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
+    # add formatter to console_handler
+    console_handler.setFormatter(formatter)
+    # add console_handler to LOGGER
+    LOGGER.addHandler(console_handler)
 
-    order_watcher = OrderWatcherClient()
+    order_watcher = OrderWatcherClient(  # pylint: disable=invalid-name
+        on_msg=print,
+        on_error=print,
+    )
     order_watcher.run()
     order_watcher.join()

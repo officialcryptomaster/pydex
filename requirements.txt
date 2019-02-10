@@ -2,11 +2,11 @@
 0x-contract-artifacts==2.0.0
 0x-json-schemas==1.0.0
 0x-order-utils==1.1.0
+0x-web3==4.7.1.post1
 attrdict==2.0.1
 Flask==1.0.2
 Flask-Cors==3.0.7
 Flask-SQLAlchemy==2.3.2
 parsimonious==0.8.0
-web3==4.8.2
 websocket-client==0.54.0
 websockets==6.0

@@ -1,10 +1,16 @@
-from pydex_app import db
+"""
+Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
+
+author: officialcryptomaster@gmail.com
+"""
+
 from pydex_app.db_models import SignedOrder
 from pydex_app.utils import paginate
 
 
-class OrderBook:
-
+class Orderbook:
+    """Abstraction for orderbook of signed orders
+    """
     def __init__(self):
         pass
 
@@ -42,7 +48,7 @@ class OrderBook:
             bids_count += eq_asks.count()
             bids = [bid.set_bid_as_sort_price() for bid in bids]
             bids.extend([eq_ask.set_ask_as_sort_price() for eq_ask in eq_asks])
-            bids = sorted(bids, key=lambda o: o._sort_price, reverse=True)
+            bids = sorted(bids, key=lambda o: o.sort_price, reverse=True)
         return paginate(bids, page=page, per_page=per_page), bids_count
 
     @classmethod
@@ -79,7 +85,7 @@ class OrderBook:
             asks_count += eq_bids.count()
             asks = [ask.set_ask_as_sort_price() for ask in asks]
             asks.extend([eq_bid.set_bid_as_sort_price() for eq_bid in eq_bids])
-            asks = sorted(asks, key=lambda o: o._sort_price, reverse=True)
+            asks = sorted(asks, key=lambda o: o.sort_price, reverse=True)
         return paginate(asks, page=page, per_page=per_page), asks_count
 
     @classmethod
@@ -91,7 +97,7 @@ class OrderBook:
         Keyword Args:
         maker_asset -- string of maker asset id (a.k.a asset_data in 0x)
         taker_asset -- string of taker asset id (a.k.a asset_data in 0x)
-        full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to 
+        full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to
             the long and short asset that make up the full set. one of these
             must match the maker to taker asset or the function will throw
             an exception

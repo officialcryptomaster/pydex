@@ -18,3 +18,7 @@ pydex.db
 
 # log files
 *.log
+
+
+# Notebook starting with ZZ (test notebook etc)
+ZZ*.ipynb

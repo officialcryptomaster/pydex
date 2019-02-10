@@ -1,5 +1,13 @@
 {
     "python.pythonPath": "pydex_env/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.pylintPath": "pydex_env/bin/pylint",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.pylintArgs": ["--max-line-length", "120", "--disable", "bad-continuation"],
+    "python.linting.flake8Path": "pydex_env/bin/pylint",
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": ["--max-line-length", "120"],
+    "python.formatting.provider": "autopep8",
+    "python.formatting.autopep8Args": ["--max-line-length", "120"]
 }

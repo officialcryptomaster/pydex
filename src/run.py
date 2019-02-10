@@ -1,3 +1,9 @@
+"""
+Run an instance of the pyDEX App
+
+author: officialcryptomaster@gmail.com
+"""
+
 from pydex_app import app, db
 
 # You can start the service as a Docker image

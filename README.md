@@ -39,3 +39,37 @@ Optionally you can set the following environment variables:
 * `NETWORK_ID`: integer ID of network (`1`: MainNet, `4`: Rinkeby, `42`: Kovan, `50`: Ganache)
 * `JSON_RPC_URL`: URL to your Web3 provider to be used by **order-watcher-server**. (Either a local ethereum node, or a public one like [Infura](https://infura.io) which typically will look like `https://rinkeby.infura.io/<your API key here>`). If you do not set this, it will default to the local Ganache URI at `http://localhost:8545`.
 * `PRIVATE_KEY`: your private key as a hex string to be used for executing orders on the relayer's behalf. Note that this is currently not secure so do not use for mainnet deployment.
+
+
+Development 
+-----------
+### Note on Contribution
+While contribution to this project is highly encouraged and appreciated, I would greatly appreciate any PRs to fully adhere to the following guidelines:
+
+1. Make sure all tests pass `<TODO(Cryptomater): actually add some tests>`
+
+2. Make sure pylint and flake8 do not show any issues by running:
+```
+./pydex_env/bin/flake8 --max-line-length=120  src
+./pydex_env/bin/pylint src
+```
+
+3. Please ensure your PR is rebased to master branch with interactive merging which squashes any useless intermediate commits. The commit comments must use imperative tense and be clear and concise.
+
+
+### Setting up Development Environment
+First make sure the environment is active
+```
+source pydex_env/bin/activate
+```
+Then, install all the dev requirements:
+```
+pip3 install -r dev_requirements.txt
+```
+
+
+### Note on using jupyter notebooks to interactively play around with pyDEX
+As always, make sure the environment is active (`source pydex_env/bin/activate`). Then, run juputer from the ./notebooks directory using the command:
+```
+PYTHONPATH=../src jupyter notebook
+```
