@@ -24,17 +24,17 @@ class TradeExecutor:
             address=exchange_address,
             abi=abi_by_name("exchange"))
 
-    def execute_fill_or_kill(self, order, taker_asset_fill_amount, signatures):
-        """Executes an array of signed_orders"""
-        func_params = [order, taker_asset_fill_amount, signatures]
+    def execute_fill_or_kill(self, order, taker_asset_fill_amount, signature):
+        """Executes a single signed_order"""
+        func_params = [order, taker_asset_fill_amount, signature]
         function = self.zrx_exchange.functions.fillOrKillOrder(*func_params)
         tx_params = self._get_tx_params()
         return self._build_and_send_tx(function, tx_params)
 
     def execute_batch_fill_or_kill(self, orders, taker_asset_fill_amounts, signatures):
-        """Executes a single signed_order"""
+        """Executes an array of signed_orders"""
         func_params = [orders, taker_asset_fill_amounts, signatures]
-        function = self.zrx_exchange.functions.batchFillOrKill(*func_params)
+        function = self.zrx_exchange.functions.batchFillOrKillOrders(*func_params)
         tx_params = self._get_tx_params()
         return self._build_and_send_tx(function, tx_params)
 
