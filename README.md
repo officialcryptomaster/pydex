@@ -48,11 +48,13 @@ While contribution to this project is highly encouraged and appreciated, I would
 
 1. Make sure all tests pass `<TODO(Cryptomater): actually add some tests>`
 
-2. Make sure pylint and flake8 do not show any issues by running:
+2. Make sure `pylint` and `flake8` do not show any issues by running:
 ```
-./pydex_env/bin/flake8 --max-line-length=120  src
 ./pydex_env/bin/pylint src
+./pydex_env/bin/flake8 src
 ```
+
+Hint: you can greatly reduce linting problems by making use of `autopep8` which is installed as part of the dev requirements and is configured to run every time you save a file in the visual studio settings provided with this project (`.vscode/settings.json`)
 
 3. Please ensure your PR is rebased to master branch with interactive merging which squashes any useless intermediate commits. The commit comments must use imperative tense and be clear and concise.
 
