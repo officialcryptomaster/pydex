@@ -1,4 +1,7 @@
 {
+    "python.unitTest.unittestEnabled": false,
+    "python.unitTest.pyTestEnabled": true,
+    "python.unitTest.nosetestsEnabled": false,
     "python.pythonPath": "pydex_env/bin/python",
     "python.linting.enabled": true,
     "python.linting.lintOnSave": true,

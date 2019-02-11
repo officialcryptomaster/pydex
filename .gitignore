@@ -13,6 +13,9 @@ node_modules
 # python cache files
 *__pycache__*
 
+#pytest cache files
+.pytest_cache
+
 # database file
 pydex.db
 
