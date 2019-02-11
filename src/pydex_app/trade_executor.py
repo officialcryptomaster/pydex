@@ -1,7 +1,7 @@
 """Web3.py"""
 from web3 import Web3  # pylint: disable=invalid-name
 from zero_ex.contract_artifacts import abi_by_name
-from pydex_app import app
+from flask import current_app
 
 
 class TradeExecutor:
@@ -12,7 +12,7 @@ class TradeExecutor:
         self._address = address
         self._private_key = private_key
         # Initialize chain_id
-        self._chain_id = app.config["PYDEX_NETWORK_ID"]
+        self._chain_id = current_app.config["PYDEX_NETWORK_ID"]
         # Initialize web3
         self._web3 = Web3(
             Web3.HTTPProvider(

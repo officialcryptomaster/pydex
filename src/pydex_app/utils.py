@@ -68,7 +68,7 @@ def setup_logger(
         # creat the full directory if it does not exist
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
-        file_handler = logging.FileHandler(log_path, mode='w')
+        file_handler = logging.FileHandler(log_path, mode='w+')
         file_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter(  # pylint: disable=invalid-name
             formatter_str,

@@ -6,7 +6,7 @@ author: officialcryptomaster@gmail.com
 from decimal import Decimal
 from eth_utils import keccak, to_bytes
 from zero_ex.json_schemas import assert_valid
-from pydex_app import db
+from pydex_app.database import PYDEX_DB as db
 from pydex_app.constants import NULL_ADDRESS
 from pydex_app.constants import ZERO_STR, MAX_INT_STR
 
@@ -66,7 +66,7 @@ class SignedOrder(db.Model):
     signature = db.Column(db.String(256), nullable=False)  # pylint: disable=no-member
     bid_price = db.Column(db.String(128))  # pylint: disable=no-member
     ask_price = db.Column(db.String(128))  # pylint: disable=no-member
-    _sort_price = None  # not a DB
+    _sort_price = None  # not a DB column
 
     @property
     def sort_price(self):
