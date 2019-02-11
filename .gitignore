@@ -17,6 +17,7 @@ node_modules
 pydex.db
 
 # log files
+log/*
 *.log
 
 

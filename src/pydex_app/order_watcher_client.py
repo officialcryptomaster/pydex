@@ -12,6 +12,8 @@ from threading import Thread
 
 import websocket
 
+from pydex_app.utils import setup_logger
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -153,23 +155,12 @@ class OrderWatcherClient:
 
 
 if __name__ == "__main__":
-    # create console handler and set level to debug
-    LOGGER.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    console_handler = logging.StreamHandler()  # pylint: disable=invalid-name
-    console_handler.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter(  # pylint: disable=invalid-name
-        "%(asctime)s.%(msecs)03d - %(funcName)20s() - %(levelname)s - %(message)s",
-        "%m-%d %H:%M:%S")
-    # add formatter to console_handler
-    console_handler.setFormatter(formatter)
-    # add console_handler to LOGGER
-    LOGGER.addHandler(console_handler)
+
+    LOGGER = setup_logger(__name__, file_name="order_watcher.log")
 
     order_watcher = OrderWatcherClient(  # pylint: disable=invalid-name
-        on_msg=print,
-        on_error=print,
+        on_msg=LOGGER.info,
+        on_error=LOGGER.error,
     )
     order_watcher.run()
     order_watcher.join()

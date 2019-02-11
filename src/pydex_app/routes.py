@@ -5,7 +5,7 @@ author: officialcryptomaster@gmail.com
 """
 import json
 
-from flask import request
+from flask import request, render_template
 from flask_cors import cross_origin
 from zero_ex.json_schemas import assert_valid
 from pydex_app import app, db  # pylint: disable=cyclic-import
@@ -17,14 +17,8 @@ from pydex_app.constants import NULL_ADDRESS
 @app.route("/")
 def hello():
     """Default route path with link to documentation."""
-    return """
-    <div>
-        <h1>PyDEX Relayer</h1>
-        <a href="http://sra-spec.s3-website-us-east-1.amazonaws.com">
-            Check API reference...
-        </a>
-    </div>
-    """
+    app.logger.info("hello")
+    return render_template("base.html")
 
 
 @app.route("/v2/asset_pairs", methods=["GET"])
@@ -34,6 +28,7 @@ def get_asset_pairs():
     information required to trade them.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getAssetPairs
     """
+    app.logger.error("not implemented")
     raise NotImplementedError()
 
 
@@ -42,6 +37,7 @@ def get_orders():
     """GET Orders endpoint retrieves a list of orders given query parameters.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
     """
+    app.logger.error("not implemented")
     raise NotImplementedError()
 
 
@@ -51,7 +47,7 @@ def get_order_book():
     """GET Orders endpoint retrieves a list of orders given query parameters.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
     """
-    print("############ GETTING ORDER BOOK")
+    app.logger.info("############ GETTING ORDER BOOK")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], \
         f"networkId={network_id} not supported"
@@ -105,7 +101,7 @@ def post_order_config():
     relayer requires.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrderConfig
     """
-    print("############ GETTING ORDER CONFIG")
+    app.logger.info("############ GETTING ORDER CONFIG")
     network_id = request.args.get("networkId", app.config["PYDEX_NETWORK_ID"])
     assert network_id == app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     order = request.json
@@ -125,6 +121,7 @@ def get_post_recipients():
     addresses for a relayer.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/v2/fee_recipients
     """
+    app.logger.error("not implemented")
     raise NotImplementedError()
 
 
@@ -134,8 +131,8 @@ def post_order():
     """POST Order endpoint submits an order to the Relayer.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/postOrder
     """
-    print("############ POSTING ORDER")
-    print(request.json)
+    app.logger.info("############ POSTING ORDER")
+    app.logger.info(request.json)
     order = SignedOrder.from_json(request.json, check_validity=True)
     db.session.add(order)  # pylint: disable=no-member
     db.session.commit()  # pylint: disable=no-member
@@ -147,4 +144,5 @@ def get_order_by_hash():
     """GET Order endpoint retrieves the order by order hash.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrder
     """
+    app.logger.error("not implemented")
     raise NotImplementedError()

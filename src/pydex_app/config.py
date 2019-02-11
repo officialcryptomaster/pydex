@@ -10,8 +10,7 @@ from pydex_app.constants import NULL_ADDRESS, RINKEBY_NETWORK_ID
 
 
 class PydexBaseConfig:  # pylint: disable=too-few-public-methods
-    """Base configuration class for pyDEX App
-    """
+    """Base configuration class for pyDEX App"""
     SECRET_KEY = os.environ.get("SECRET_KEY", "development secret key is not safe")
     SQLALCHEMY_DATABASE_URI = "sqlite:///../../pydex.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
