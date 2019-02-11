@@ -38,7 +38,7 @@ def setup_logger(
     file_name=None,
     log_to_stdout=True,
     level=logging.DEBUG,
-    base_dir="./log",
+    base_dir="./logs",
 ):
     """Set up a logger which optionally also logs to file
 
@@ -56,8 +56,8 @@ def setup_logger(
     logger = logging.getLogger(logger_name)
 
     formatter_str = (
-        "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s.%(funcName)s():%(lineno)d"
-        " - %(message)s")
+        "%(asctime)s.%(msecs)03d [%(levelname)s] %(filename)s:%(lineno)d "
+        "%(name)s.%(funcName)s(): %(message)s")
     time_format_str = "%Y-%m-%d %H:%M:%S"
 
     if file_name:
@@ -68,7 +68,7 @@ def setup_logger(
         # creat the full directory if it does not exist
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
-        file_handler = logging.FileHandler(log_path, mode='w+')
+        file_handler = logging.FileHandler(log_path, mode='a')
         file_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter(  # pylint: disable=invalid-name
             formatter_str,
