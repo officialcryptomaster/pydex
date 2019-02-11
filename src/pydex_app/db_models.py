@@ -97,8 +97,7 @@ class SignedOrder(db.Model):
         include_hash=False,
         include_signature=True,
     ):
-        """Get a json representation of the SignedOrder
-        """
+        """Get a json representation of the SignedOrder"""
         order = {
             "makerAddress": self.maker_address,
             "takerAddress": self.taker_address,
@@ -216,12 +215,31 @@ class SignedOrder(db.Model):
         ).hex()
 
     @classmethod
-    def from_json(cls, order_json, check_validity=False):
-        """Given a json
+    def from_json(
+        cls,
+        order_json,
+        check_validity=False,
+        include_signature=True,
+    ):
+        """Given a json representation of a signed order, return a SignedOrder object
+
+        Keyword arguments:
+        order_json -- a dict conforming to "/signedOrderSchema" or "/orderSchema"
+            (dependign on whether `include_signature` is set to True or False)
+            schemas can be found at:
+            <https://github.com/0xProject/0x-monorepo/tree/development/packages/json-schemas/schemas>
+        check_validity -- whether we should do an explicit check to make sure the
+            passed in dict adheres to the required schema (default: True)
+        include_signature -- whether the object is expected to have the signature on it
+            or not. This will affect whether "/signedOrderSchema" or "/orderSchema" is
+            used for validation (default: True)
         """
         order = cls()
         if check_validity:
-            assert_valid(order_json, "/signedOrderSchema")
+            if include_signature:
+                assert_valid(order_json, "/signedOrderSchema")
+            else:
+                assert_valid(order_json, "/orderSchema")
         order.maker_address = order_json["makerAddress"]
         order.taker_address = order_json["takerAddress"]
         order.maker_fee = order_json["makerFee"]
@@ -235,6 +253,7 @@ class SignedOrder(db.Model):
         order.exchange_address = order_json["exchangeAddress"]
         order.fee_recipient_address = order_json["feeRecipientAddress"]
         order.expiration_time_secs = order_json["expirationTimeSeconds"]
-        order.signature = order_json["signature"]
+        if include_signature:
+            order.signature = order_json["signature"]
         order.update()
         return order
