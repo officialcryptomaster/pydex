@@ -146,7 +146,7 @@ class OrderWatcherClient:
         """Add an order to the server's watch list
 
         Keyword arguments:
-        signed_order: dict of a signedOrder
+        signed_order -- dict of a signedOrder
         """
         self._rpc(
             method="ADD_ORDER",
@@ -156,7 +156,7 @@ class OrderWatcherClient:
         """Remove an order from the server's watch list
 
         Keyword arguments:
-        order_hash: string hex hash of signed order
+        order_hash -- string hex hash of signed order
         """
         self._rpc(
             method="REMOVE_ORDER",
