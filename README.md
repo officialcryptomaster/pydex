@@ -46,7 +46,10 @@ Development
 ### Note on Contribution
 While contribution to this project is highly encouraged and appreciated, I would greatly appreciate any PRs to fully adhere to the following guidelines:
 
-1. Make sure all tests pass `<TODO(Cryptomater): actually add some tests>`
+1. Make sure all tests pass
+```
+PYTHONPATH=./src ./pydex_env/bin/pytest
+```
 
 2. Make sure `pylint` and `flake8` do not show any issues by running:
 ```

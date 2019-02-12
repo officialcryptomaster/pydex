@@ -93,7 +93,12 @@ def get_order_book():
             ],
         }
     }
-    return json.dumps(res)
+    # assert_valid(res, "/relayerApiOrderbookResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/order_config', methods=["POST"])
@@ -114,7 +119,12 @@ def post_order_config():
         "makerFee": current_app.config["PYDEX_ZRX_MAKER_FEE"],
         "takerFee": current_app.config["PYDEX_ZRX_TAKER_FEE"],
     }
-    return json.dumps(res)
+    # assert_valid(res, "/relayerApiOrderConfigResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/fee_recipients', methods=["GET"])
@@ -135,10 +145,15 @@ def post_order():
     """
     current_app.logger.info("############ POSTING ORDER")
     current_app.logger.info(request.json)
+    assert_valid(request.json, "/signedOrderSchema")
     order = SignedOrder.from_json(request.json, check_validity=True)
     db.session.add(order)  # pylint: disable=no-member
     db.session.commit()  # pylint: disable=no-member
-    return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
+    return current_app.response_class(
+        response={'success': True},
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/order/', methods=["GET"])

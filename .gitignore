@@ -3,6 +3,9 @@
 *.swp
 *.swo
 
+# temp OS files
+.DS_Store
+
 # notebook checkpoints
 notebooks/.ipynb_checkpoints/*
 
@@ -22,7 +25,6 @@ pydex.db
 # log files
 log/*
 *.log
-
 
 # Notebook starting with ZZ (test notebook etc)
 ZZ*.ipynb
