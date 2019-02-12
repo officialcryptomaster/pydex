@@ -1,6 +1,15 @@
 """
 OrderWatcherClient is the client responsible for registering orders with the
-0x order-watcher server
+0x order-watcher server.
+
+For this client to work, there needs to be an order-watcher server running.
+The easiest way to run the server is using the `start-order-watcher` which is
+provided with this project.
+It is also possible to run the server as a Docker image using:
+`docker run -ti -p 8080:8080 -e JSON_RPC_URL=https://mainnet.infura.io \\`
+    `-e NETWORK_ID=1 0xorg/order-watcher`
+You can test that the service is running with
+`wscat -c ws://0.0.0.0:8080`
 
 author: officialcryptomaster@gmail.com
 """
