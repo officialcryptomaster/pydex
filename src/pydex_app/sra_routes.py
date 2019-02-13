@@ -8,7 +8,6 @@ import json
 from flask import request, render_template, Blueprint, current_app
 from flask_cors import cross_origin
 from zero_ex.json_schemas import assert_valid
-from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.orderbook import Orderbook
 from pydex_app.constants import NULL_ADDRESS
@@ -147,8 +146,8 @@ def post_order():
     current_app.logger.info(request.json)
     assert_valid(request.json, "/signedOrderSchema")
     order = SignedOrder.from_json(request.json, check_validity=True)
-    db.session.add(order)  # pylint: disable=no-member
-    db.session.commit()  # pylint: disable=no-member
+    Orderbook.add_order(order=order)
+
     return current_app.response_class(
         response={'success': True},
         status=200,
