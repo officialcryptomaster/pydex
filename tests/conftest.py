@@ -19,7 +19,7 @@ from pydex_app import create_app
 from pydex_app.config import PydexBaseConfig
 from pydex_app.constants import NULL_ADDRESS, RINKEBY_NETWORK_ID, NETWORK_INFO
 from pydex_app.db_models import SignedOrder
-from pydex_app.utils import to_base_unit_amount, setup_logger
+from pydex_app.utils import to_base_unit_amount, setup_logger, sign_order
 from pydex_client.client import PyDexClient
 
 LOGGER = setup_logger("TestLogger")
@@ -210,10 +210,7 @@ def make_veth_signed_order(
         order.taker_asset_data = taker_asset_data
         order.exchange_address = exchange_address
         assert_valid(order.update().to_json(), "/orderSchema")
-        order.signature = web3_instance.eth.account.signHash(
-            order.update().hash,
-            private_key=private_key
-        )["signature"].hex()
+        order.signature = sign_order(order.hash, web3_instance, private_key)
         assert_valid(order.to_json(), "/signedOrderSchema")
         return order
 
