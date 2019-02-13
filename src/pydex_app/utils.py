@@ -7,6 +7,7 @@ import logging
 import os
 from decimal import Decimal
 import colorlog
+from eth_account.messages import defunct_hash_message
 
 
 def to_base_unit_amount(amount, decimals=18):
@@ -88,3 +89,31 @@ def setup_logger(
     logger.setLevel(level)
 
     return logger
+
+
+def sign_order(order_hash, web3_instance, private_key):  # pylint: disable=redefined-outer-name
+    """Function to sign order_hash via eth-sign and convert ec_signature to
+    0x compatible signature
+    """
+
+    def to_32byte_hex(val):
+        """Method to convert value to bytes32 hex
+        """
+        return web3_instance.toHex(web3_instance.toBytes(val).rjust(32, b'\0'))
+
+    def convert_ec_sig(ec_signature):
+        """Make ec_signature compatible with 0x
+        """
+        r = to_32byte_hex(ec_signature["r"])[2:]  # pylint: disable=invalid-name
+        s = to_32byte_hex(ec_signature["s"])[2:]  # pylint: disable=invalid-name
+        v = hex(ec_signature["v"])  # pylint: disable=invalid-name
+        # Append 03 to specify signature type of eth-sign
+        return v + r + s + "03"
+
+    def _sign_order():
+        msg_hash = defunct_hash_message(hexstr=order_hash)
+        ec_signature = web3_instance.eth.account.signHash(
+            msg_hash, private_key=private_key)
+        return convert_ec_sig(ec_signature=ec_signature)
+
+    return _sign_order()

@@ -3,24 +3,19 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
-
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
-from pydex_app.order_watcher_client import OrderWatcherClient
+from pydex_app.order_watcher_client import OrderWatcherClient as owc
 from pydex_app.utils import paginate
 
 
 class Orderbook:
     """Abstraction for orderbook of signed orders
     """
-    _owc = OrderWatcherClient(
-        on_msg=print,
-        on_error=print,
-    )
+    _owc = owc()
 
     def __init__(self):
-        # Start order watcher
-        Orderbook._owc.run()
+        pass
 
     @classmethod
     def add_order(cls, order):
