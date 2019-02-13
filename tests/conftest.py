@@ -106,7 +106,7 @@ def test_app():
 
     class PydexTestConfig(PydexBaseConfig):  # pylint: disable=too-few-public-methods
         """Test Config"""
-        TESTING = False
+        TESTING = True
         SQLALCHEMY_DATABASE_URI = "sqlite:///{}".format(temp_db_path)
 
     app = create_app(PydexTestConfig)
