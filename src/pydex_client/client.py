@@ -6,12 +6,13 @@ author: officialcryptomaster@gmail.com
 import json
 import requests
 from zero_ex.json_schemas import assert_valid
-from utils.web3utils import Web3Client
+from utils.zeroexutils import ZeroExWeb3Client
 
 
-class PyDexClient(Web3Client):
+class PyDexClient(ZeroExWeb3Client):
     """PyDEX Client to interact with PyDEX app"""
 
+    __name__ = "PyDexClient"
     orderbook_url = "/v2/orderbook"
     post_order_url = "/v2/order"
 
@@ -40,6 +41,15 @@ class PyDexClient(Web3Client):
         self._pydex_api_url = pydex_api_url
         if self._pydex_api_url.endswith("/"):
             self._pydex_api_url = self._pydex_api_url[:-1]
+
+    def __str__(self):
+        return (
+            f"[{self.__name__}](network_id={self._network_id}"
+            f"web3_rpc_url={self._web3_rpc_url}"
+            f", pydex_api_url={self._pydex_api_url})"
+        )
+
+    __repr__ = __str__
 
     def make_orderbook_query(
         self,

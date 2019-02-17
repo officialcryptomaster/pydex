@@ -137,17 +137,7 @@ class Web3Client:
     @property
     def account_address_checksumed(self):
         """Get the account address as a checksumable hexstr"""
-        return Web3.toChecksumAddress(self.account_address)
-
-    def sign_hash_0x_compat(self, hash_hex):
-        """Returns a 0x-compatible signature from signing a hash_hex with eth-sign
-
-        Keyword argument:
-        hash_hex -- hex bytes or hex str of a hash to sign
-            (must be convertile to `HexBytes`)
-        """
-        ec_signature = self.sign_hash(hash_hex)
-        return self.get_0x_signature_from_ec_signature(ec_signature=ec_signature)
+        return self.get_checksum_address(self.account_address)
 
     def sign_hash(self, hash_hex):
         """Returns the ec_signature from signing the hash_hex with eth-sign
@@ -166,28 +156,7 @@ class Web3Client:
         )
         return ec_signature
 
-    @staticmethod
-    def get_0x_signature_from_ec_signature(ec_signature):
-        """Returns a hex string 0x-compatible signature from an eth-sign ec_signature
-
-        0x signature is a hexstr made from the concatenation of the hexstr of the "v",
-        r", and "s" parameters of an ec_signature and ending with constant "03" to
-        indicate "eth-sign" was used.
-        The "r" and "s" parts of the signature need to each represent 32 bytes
-        and so will be righ-justified with "0" padding on the left (i.e. "r" and "s"
-        will be strings of 64 hex characters each, which means no leading "0x")
-
-        Keyword argument:
-        ec_singature -- A dict containing "r", "s" and "v" parameters of an elliptic
-            curve signature as integers
-        """
-        v = hex(ec_signature["v"])  # pylint: disable=invalid-name
-        r = HexBytes(ec_signature["r"]).rjust(32, b'\0').hex()  # pylint: disable=invalid-name
-        s = HexBytes(ec_signature["s"]).rjust(32, b'\0').hex()  # pylint: disable=invalid-name
-        # append "03" to specify signature type of eth-sign
-        return v + r + s + "03"
-
-    @staticmethod
-    def get_checksum_address(addr):
+    @classmethod
+    def get_checksum_address(cls, addr):
         """Get a checksum address from a regular address"""
-        return Web3.toChecksumAddress(addr)
+        return Web3.toChecksumAddress(addr.lower())
