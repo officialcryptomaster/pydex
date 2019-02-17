@@ -150,7 +150,7 @@ def make_veth_signed_order(
         fee_recipient_address=NULL_ADDRESS,
         sender_address=NULL_ADDRESS,
         exchange_address=exchange_address,  # pylint: disable=redefined-outer-name
-        web3_client=pydex_client,  # pylint: disable=redefined-outer-name
+        pydex_client=pydex_client,  # pylint: disable=redefined-outer-name
     ):
         """Convenience function for making valid orders to buy or sell
         SHORT or LONG assets against VETH.
@@ -199,7 +199,7 @@ def make_veth_signed_order(
         order.taker_asset_data = taker_asset_data
         order.exchange_address = exchange_address
         # sign the hash
-        order.signature = web3_client.sign_hash_0x_compat(order.update().hash)
+        order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
         # make sure the signed_order is valid
         assert_valid(order.to_json(), "/signedOrderSchema")
         return order

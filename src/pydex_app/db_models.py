@@ -4,44 +4,11 @@ Database models of common objects
 author: officialcryptomaster@gmail.com
 """
 from decimal import Decimal
-from eth_utils import keccak, to_bytes
 from zero_ex.json_schemas import assert_valid
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.constants import NULL_ADDRESS
 from pydex_app.constants import ZERO_STR, MAX_INT_STR
-
-
-eip191_header = b"\x19\x01"  # pylint: disable=invalid-name
-
-
-eip712_domain_separator_schema_hash = keccak(  # pylint: disable=invalid-name
-    b"EIP712Domain(string name,string version,address verifyingContract)"
-)
-
-
-eip712_order_schema_hash = keccak(  # pylint: disable=invalid-name
-    b"Order("
-    + b"address makerAddress,"
-    + b"address takerAddress,"
-    + b"address feeRecipientAddress,"
-    + b"address senderAddress,"
-    + b"uint256 makerAssetAmount,"
-    + b"uint256 takerAssetAmount,"
-    + b"uint256 makerFee,"
-    + b"uint256 takerFee,"
-    + b"uint256 expirationTimeSeconds,"
-    + b"uint256 salt,"
-    + b"bytes makerAssetData,"
-    + b"bytes takerAssetData"
-    + b")"
-)
-
-
-eip712_domain_struct_header = (  # pylint: disable=invalid-name
-    eip712_domain_separator_schema_hash
-    + keccak(b"0x Protocol")
-    + keccak(b"2")
-)
+from utils.zeroexutils import ZeroExWeb3Client
 
 
 class SignedOrder(db.Model):
@@ -129,7 +96,7 @@ class SignedOrder(db.Model):
 
     def update_hash(self):
         """Update the hash of the order and return the order for chaining"""
-        self.hash = self.get_order_hash_hex(self)
+        self.hash = self.get_order_hash(self)
         return self
 
     def update(self):
@@ -177,40 +144,9 @@ class SignedOrder(db.Model):
         return self
 
     @classmethod
-    def get_order_hash_hex(cls, order):
-        """Calculate hash of an order as per 0x specification"""
-        def pad_20_bytes_to_32(twenty_bytes: bytes):
-            return bytes(12) + twenty_bytes
-
-        def int_to_32_big_endian_bytes(i: int):
-            return i.to_bytes(32, byteorder="big")
-
-        eip712_domain_struct_hash = keccak(
-            eip712_domain_struct_header
-            + pad_20_bytes_to_32(to_bytes(hexstr=order.exchange_address))
-        )
-
-        eip712_order_struct_hash = keccak(
-            eip712_order_schema_hash
-            + pad_20_bytes_to_32(to_bytes(hexstr=order.maker_address))
-            + pad_20_bytes_to_32(to_bytes(hexstr=order.taker_address))
-            + pad_20_bytes_to_32(to_bytes(hexstr=order.fee_recipient_address))
-            + pad_20_bytes_to_32(to_bytes(hexstr=order.sender_address))
-            + int_to_32_big_endian_bytes(int(order.maker_asset_amount))
-            + int_to_32_big_endian_bytes(int(order.taker_asset_amount))
-            + int_to_32_big_endian_bytes(int(order.maker_fee))
-            + int_to_32_big_endian_bytes(int(order.taker_fee))
-            + int_to_32_big_endian_bytes(int(order.expiration_time_secs))
-            + int_to_32_big_endian_bytes(int(order.salt))
-            + keccak(to_bytes(hexstr=order.maker_asset_data))
-            + keccak(to_bytes(hexstr=order.taker_asset_data))
-        )
-
-        return "0x" + keccak(
-            eip191_header
-            + eip712_domain_struct_hash
-            + eip712_order_struct_hash
-        ).hex()
+    def get_order_hash(cls, signed_order):
+        """Returns hex string hash of 0x SignedOrder object"""
+        return ZeroExWeb3Client.get_order_hash(signed_order.to_json())
 
     @classmethod
     def from_json(
