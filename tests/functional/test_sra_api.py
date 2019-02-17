@@ -28,16 +28,51 @@ def test_query_orderbook(
     # assert res == expected_res
 
 
+def test_to_and_from_json_signed_order(
+    pydex_client,
+):
+    """Make sure creating a signed order from json does not change when it is turned back to json"""
+    expected_order_json = {
+        'makerAddress': '0x5409ed021d9299bf6814279a6a1411a7e866a631',
+        'takerAddress': '0x0000000000000000000000000000000000000000',
+        'makerFee': '0',
+        'takerFee': '0',
+        'senderAddress': '0x0000000000000000000000000000000000000000',
+        'makerAssetAmount': '50000000000000',
+        'takerAssetAmount': '100000000000000',
+        'makerAssetData': '0xf47261b0000000000000000000000000c4abc01578139e2105d9c9eba0b0aa6f6a60d082',
+        'takerAssetData': '0xf47261b0000000000000000000000000358b48569a4a4ef6310c1f1d8e50be9d068a50c6',
+        'exchangeAddress': '0xbce0b5f6eb618c565c3e5f5cd69652bbc279f44e',
+        'salt': '314725192512133120',
+        'feeRecipientAddress': '0x0000000000000000000000000000000000000000',
+        'expirationTimeSeconds': 1550439701,
+        'hash': '0x3fbc553ade14a36ba6e5055817d44170797c560e62d0db5c79aa0739732c8199',
+        'signature': (
+            '0x1c4f65f2bfbf384e783cbb62ef27e7091fa02d9fa9ad1299670f05582325e027b'
+            '9261afef5bceed9e0c84a92aeeead35df85b1cf174a02f0f3d2935c73552ac28803'),
+    }
+    # make a new SignedOrder object without the signature of hash
+    order = SignedOrder.from_json(
+        {k: v for k, v in expected_order_json.items()
+         if k not in ["signature", "hash"]},
+        include_signature=False,
+    )
+    print(pydex_client.private_key)
+    print(order.update().hash)
+    # sign the order
+    order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
+    assert order.to_json(include_hash=True) == expected_order_json
+
+
 def test_post_order(
     test_client, pydex_client, make_veth_signed_order
 ):
     """Make sure posting order returns success and order exists
-    in database.
-    """
+    in database."""
     order = make_veth_signed_order(
         asset_type="LONG",
         qty=0.0001,
-        price=0.45,
+        price=0.5,
         side="BUY",
     )
     res = test_client.post(

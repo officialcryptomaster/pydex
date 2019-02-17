@@ -7,7 +7,6 @@ author: originalcryptomaster@gmail.com
 import os
 import tempfile
 
-import binascii
 from decimal import Decimal
 import time
 import pytest
@@ -21,7 +20,7 @@ from pydex_app.constants import NULL_ADDRESS
 from pydex_app.db_models import SignedOrder
 from pydex_client.client import PyDexClient
 from utils.logutils import setup_logger
-from utils.web3utils import Web3Client, to_base_unit_amount
+from utils.web3utils import to_base_unit_amount
 
 LOGGER = setup_logger("TestLogger")
 
@@ -57,50 +56,36 @@ def asset_infos():
 
 @pytest.fixture(scope="session")
 def network_id():
-    """Get network id from NETWORK_ID env var or default to RINKEBY"""
-    _network_id = os.environ.get("NETWORK_ID")
-    if not _network_id:
-        _network_id = NetworkId.RINKEBY.value
-    else:
-        _network_id = NetworkId(int(_network_id)).value
-    return _network_id
+    """Integer network ID hard-coded to 50 for Ganache"""
+    return NetworkId.GANACHE.value
 
 
 @pytest.fixture(scope="session")
 def exchange_address(network_id):  # pylint: disable=redefined-outer-name
-    """Get the 0x Exchange contract address for the given network_id"""
+    """String address of the 0x Exchange contract on provided network_id"""
     return NETWORK_TO_ADDRESSES[NetworkId(int(network_id))].exchange
 
 
 @pytest.fixture(scope="session")
 def web3_rpc_url():
-    """Web3 RPC URL from WEB3_RPC_URL env var"""
-    _web3_rpc_url = os.environ.get("WEB3_RPC_URL")
-    assert _web3_rpc_url, "Please make sure a WEB3_RPC_URL is set"
-    return _web3_rpc_url
+    """String url of Web3 RPC service
+    hard-coded to default local Ganache port 8445
+    """
+    return "http://127.0.0.1:8545"
 
 
 @pytest.fixture(scope="session")
 def private_key():
-    """Private key from PRIVATE_KEY env var"""
-    _private_key = os.environ.get("PRIVATE_KEY")
-    assert _private_key, "Please make sure a test PRIVATE_KEY env var is set"
-    return binascii.a2b_hex(_private_key)
+    """String private key hard-coded as first account on 0x ganache snapshot
+    mnemonic = "concert load couple harbor equip island argue ramp clarify fence smart topic"
+    private_key = "f2f48ee19680706196e2e339e5da3491186e0c4c5030670656b0e0164837257d"
+    """
+    return "f2f48ee19680706196e2e339e5da3491186e0c4c5030670656b0e0164837257d"
 
 
 @pytest.fixture(scope="session")
-def web3_client(network_id, web3_rpc_url, private_key):  # pylint: disable=redefined-outer-name
-    """Get a Web3Client which is a nice wrapper for a Web3 instance"""
-    return Web3Client(
-        network_id=network_id,
-        web3_rpc_url=web3_rpc_url,
-        private_key=private_key,
-    )
-
-
-@pytest.fixture(scope="session")
-def test_app():
-    """PyDEX flask app instance with fresh database"""
+def test_app(network_id):  # pylint: disable=redefined-outer-name
+    """PyDex flask app instance with fresh database"""
     temp_db_path = os.path.join(
         os.getcwd(),
         "{}_pydex.db".format(tempfile.mktemp(dir=".tmp")))
@@ -114,6 +99,7 @@ def test_app():
         """Test Config"""
         TESTING = True
         SQLALCHEMY_DATABASE_URI = "sqlite:///{}".format(temp_db_path)
+        PYDEX_NETWORK_ID = network_id
 
     app = create_app(PydexTestConfig)
 
@@ -129,13 +115,13 @@ def test_app():
 
 @pytest.fixture(scope="session")
 def test_client(test_app):  # pylint: disable=redefined-outer-name
-    """Test client associate with test app"""
+    """Test client instance associate with test app"""
     return test_app.test_client()
 
 
 @pytest.fixture(scope="session")
 def pydex_client(network_id, web3_rpc_url, private_key):  # pylint: disable=redefined-outer-name
-    """An instance of the pyDexClient object configured with the private key"""
+    """pyDexClient instance configured with the private key"""
     return PyDexClient(
         network_id=network_id,
         web3_rpc_url=web3_rpc_url,
@@ -146,16 +132,16 @@ def pydex_client(network_id, web3_rpc_url, private_key):  # pylint: disable=rede
 @pytest.fixture(scope="session")
 def make_veth_signed_order(
     asset_infos,  # pylint: disable=redefined-outer-name
-    web3_client,  # pylint: disable=redefined-outer-name
+    pydex_client,  # pylint: disable=redefined-outer-name
     exchange_address,  # pylint: disable=redefined-outer-name
 ):
-    """Create a new instance of a signed order"""
+    """Convenience function for creating a new instance of a signed order"""
     def _make_veth_signed_order(  # pylint: disable=too-many-locals
         asset_type,
         qty,
         price,
         side,
-        maker_address=web3_client.account_address,
+        maker_address=pydex_client.account_address,
         expiration_time_secs=600,
         maker_fee="0",
         taker_fee="0",
@@ -164,9 +150,9 @@ def make_veth_signed_order(
         fee_recipient_address=NULL_ADDRESS,
         sender_address=NULL_ADDRESS,
         exchange_address=exchange_address,  # pylint: disable=redefined-outer-name
-        web3_client=web3_client,  # pylint: disable=redefined-outer-name
+        web3_client=pydex_client,  # pylint: disable=redefined-outer-name
     ):
-        """ Convenience function for making valid orders to buy or sell
+        """Convenience function for making valid orders to buy or sell
         SHORT or LONG assets against VETH.
 
         Keyword arguments:
