@@ -154,12 +154,14 @@ class ZeroExWeb3Client(Web3Client):
         _order = {}
         _order["makerAddress"] = cls.get_checksum_address(order["makerAddress"])
         _order["takerAddress"] = cls.get_checksum_address(order["takerAddress"])
-        _order["exchangeAddress"] = cls.get_checksum_address(order["exchangeAddress"])
+        _order["feeRecipientAddress"] = cls.get_checksum_address(order["feeRecipientAddress"])
         _order["senderAddress"] = cls.get_checksum_address(order["senderAddress"])
-        _order["makerFee"] = int(order["makerFee"])
-        _order["takerFee"] = int(order["takerFee"])
+        _order["exchangeAddress"] = cls.get_checksum_address(order["exchangeAddress"])
         _order["makerAssetAmount"] = int(order["makerAssetAmount"])
         _order["takerAssetAmount"] = int(order["takerAssetAmount"])
+        _order["makerFee"] = int(order["makerFee"])
+        _order["takerFee"] = int(order["takerFee"])
+        _order["expirationTimeSeconds"] = int(order["expirationTimeSeconds"])
         _order["salt"] = int(order["salt"])
         _order["makerAssetData"] = HexBytes(order["makerAssetData"])
         _order["takerAssetData"] = HexBytes(order["takerAssetData"])
@@ -211,5 +213,6 @@ class ZeroExWeb3Client(Web3Client):
             "from": self.account_address_checksumed,
             "value": 0,  # we don't ever want to transfer any ETH
             "gas": gas,
-            "nonce": self._web3_eth.getTransactionCount(self.account_address)
+            "nonce": self._web3_eth.getTransactionCount(
+                self.account_address_checksumed)
         }
