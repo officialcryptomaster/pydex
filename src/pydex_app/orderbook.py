@@ -6,7 +6,7 @@ author: officialcryptomaster@gmail.com
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.order_watcher_client import OrderWatcherClient as owc
-from pydex_app.utils import paginate
+from utils.miscutils import paginate
 
 
 class Orderbook:
@@ -19,8 +19,7 @@ class Orderbook:
 
     @classmethod
     def add_order(cls, order):
-        """Add order to database and order watcher
-        """
+        """Add order to database and order watcher"""
         cls._owc.add_order(signed_order=order.to_json())
         db.session.add(order)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member

@@ -21,7 +21,7 @@ from threading import Thread
 
 import websocket
 
-from pydex_app.utils import setup_logger
+from utils.logutils import setup_logger
 
 LOGGER = logging.getLogger(__name__)
 

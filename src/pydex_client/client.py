@@ -5,11 +5,11 @@ author: officialcryptomaster@gmail.com
 """
 import json
 import requests
-from web3 import Web3, HTTPProvider
 from zero_ex.json_schemas import assert_valid
+from utils.web3utils import Web3Client
 
 
-class PyDexClient:
+class PyDexClient(Web3Client):
     """PyDEX Client to interact with PyDEX app"""
 
     orderbook_url = "/v2/orderbook"
@@ -19,27 +19,27 @@ class PyDexClient:
         self,
         network_id,
         web3_rpc_url,
-        private_key,
-        pydex_api_url="https://localhost:3000",
+        private_key=None,
+        pydex_api_url="http://localhost:3000",
     ):
-        """
+        """Create a PyDexClient to interact with PyDEX exchange
+
         Keyword arguments:
-        network_id -- integer ID of network
-        web3_rpc_url -- url of web3 provider for executing orders
-        private_key -- string private key of wallet to sign orders
+        network_id -- numerable id of networkId convertible to `constants.NetworkId`
+        web3_rpc_url -- string of the URL of the Web3 service
+        private_key -- hex bytes or hex string of private key for signing transactions
+            (must be convertible to `HexBytes`) (default: None)
         pydex_api_url -- string path to pyDEX app api server
-            (default: "https://localhost:3000")
+            (default: "http://localhost:3000")
         """
-        self._network_id = network_id
-        self._web3_rpc_url = web3_rpc_url
-        self.__private_key = private_key
+        super(PyDexClient, self).__init__(
+            network_id=network_id,
+            web3_rpc_url=web3_rpc_url,
+            private_key=private_key,
+        )
         self._pydex_api_url = pydex_api_url
         if self._pydex_api_url.endswith("/"):
             self._pydex_api_url = self._pydex_api_url[:-1]
-        self._web3_provider = HTTPProvider(self._web3_rpc_url)
-        self._web3 = Web3(self._web3_provider)
-        self._web3_eth = self._web3.eth  # pylint: disable=no-member
-        self._acct = self._web3_eth.account.privateKeyToAccount(self.__private_key)
 
     def make_orderbook_query(
         self,
@@ -52,8 +52,8 @@ class PyDexClient:
         """Get a dict for querying the orderbook
 
         Keyword arguments:
-        base_asset_data -- string base asset data
-        quote_asset_data -- string quote asset data
+        base_asset_data -- hexstr base asset data
+        quote_asset_data -- hexstr quote asset data
         full_set_asset_data -- a dict with "LONG" and "SHORT" keys representing
             the full set of either the base or quote asset data (default: None)
         page -- positive integer page number of paginated results (default: 1)
@@ -101,8 +101,8 @@ class PyDexClient:
         Keyword Arguments:
         order -- SignedOrder object to post
         """
-        order_json = order.to_json()
-        assert_valid(order, "/signedOrderSchema")
+        order_json = order.update().to_json()
+        assert_valid(order_json, "/signedOrderSchema")
         res = requests.post(
             "{}{}".format(self._pydex_api_url, self.post_order_url),
             json=order_json

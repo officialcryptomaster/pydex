@@ -7,6 +7,7 @@ import json
 
 from flask import request, render_template, Blueprint, current_app
 from flask_cors import cross_origin
+from zero_ex.contract_addresses import NetworkId
 from zero_ex.json_schemas import assert_valid
 from pydex_app.db_models import SignedOrder
 from pydex_app.orderbook import Orderbook
@@ -49,7 +50,7 @@ def get_order_book():
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
     """
     current_app.logger.info("############ GETTING ORDER BOOK")
-    network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
+    network_id = NetworkId(int(request.args.get("networkId"))).value
     assert network_id == current_app.config["PYDEX_NETWORK_ID"], \
         f"networkId={network_id} not supported"
     page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
