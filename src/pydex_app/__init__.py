@@ -8,7 +8,7 @@ from flask import Flask
 
 from pydex_app.database import PYDEX_DB as db
 import pydex_app.config as pydex_config
-from pydex_app.utils import setup_logger
+from utils.logutils import setup_logger
 
 
 def create_app(config=pydex_config.PydexBaseConfig):

@@ -12,20 +12,18 @@ from decimal import Decimal
 import time
 import pytest
 
-from web3 import Web3, HTTPProvider
 from zero_ex.json_schemas import assert_valid
+from zero_ex.contract_addresses import NETWORK_TO_ADDRESSES, NetworkId
 
 from pydex_app import create_app
 from pydex_app.config import PydexBaseConfig
-from pydex_app.constants import NULL_ADDRESS, RINKEBY_NETWORK_ID, NETWORK_INFO
+from pydex_app.constants import NULL_ADDRESS
 from pydex_app.db_models import SignedOrder
-from pydex_app.utils import to_base_unit_amount, setup_logger, sign_order
 from pydex_client.client import PyDexClient
+from utils.logutils import setup_logger
+from utils.web3utils import Web3Client, to_base_unit_amount
 
 LOGGER = setup_logger("TestLogger")
-
-NETWORK_ID = RINKEBY_NETWORK_ID
-EXCHANGE_ADDRESS = NETWORK_INFO[NETWORK_ID]["exchange_id"]
 
 
 @pytest.fixture(scope="session")
@@ -40,7 +38,7 @@ def asset_infos():
     Ideally, need to enhance this later to dynamically pull this information
     from the configured network.
     """
-    class AssetInfos:
+    class AssetInfos:  # pylint: disable=too-few-public-methods
         """Convenience class holding asset info"""
         VETH_TOKEN = "0xc4abc01578139e2105d9c9eba0b0aa6f6a60d082"
         VETH_ASSET_DATA = "0xf47261b0000000000000000000000000c4abc01578139e2105d9c9eba0b0aa6f6a60d082"
@@ -58,11 +56,20 @@ def asset_infos():
 
 
 @pytest.fixture(scope="session")
-def private_key():
-    """Private key from PRIVATE_KEY env var"""
-    _private_key = os.environ.get("PRIVATE_KEY")
-    assert _private_key, "Please make sure a test PRIVATE_KEY env var is set"
-    return binascii.a2b_hex(_private_key)
+def network_id():
+    """Get network id from NETWORK_ID env var or default to RINKEBY"""
+    _network_id = os.environ.get("NETWORK_ID")
+    if not _network_id:
+        _network_id = NetworkId.RINKEBY.value
+    else:
+        _network_id = NetworkId(int(_network_id)).value
+    return _network_id
+
+
+@pytest.fixture(scope="session")
+def exchange_address(network_id):  # pylint: disable=redefined-outer-name
+    """Get the 0x Exchange contract address for the given network_id"""
+    return NETWORK_TO_ADDRESSES[NetworkId(int(network_id))].exchange
 
 
 @pytest.fixture(scope="session")
@@ -74,22 +81,21 @@ def web3_rpc_url():
 
 
 @pytest.fixture(scope="session")
-def web3_instance(web3_rpc_url):  # pylint: disable=redefined-outer-name
-    """A web3 instance configured with the web3_rpc_url"""
-    web3_provider = HTTPProvider(web3_rpc_url)
-    return Web3(web3_provider)
+def private_key():
+    """Private key from PRIVATE_KEY env var"""
+    _private_key = os.environ.get("PRIVATE_KEY")
+    assert _private_key, "Please make sure a test PRIVATE_KEY env var is set"
+    return binascii.a2b_hex(_private_key)
 
 
 @pytest.fixture(scope="session")
-def my_account(web3_instance, private_key):  # pylint: disable=redefined-outer-name
-    """Account associated with PRIVATE_KEY"""
-    return web3_instance.eth.account.privateKeyToAccount(private_key)
-
-
-@pytest.fixture(scope="session")
-def my_address(my_account):  # pylint: disable=redefined-outer-name
-    """Address of my_account as a string"""
-    return my_account.address.lower()
+def web3_client(network_id, web3_rpc_url, private_key):  # pylint: disable=redefined-outer-name
+    """Get a Web3Client which is a nice wrapper for a Web3 instance"""
+    return Web3Client(
+        network_id=network_id,
+        web3_rpc_url=web3_rpc_url,
+        private_key=private_key,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -128,10 +134,10 @@ def test_client(test_app):  # pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope="session")
-def pydex_client(web3_rpc_url, private_key):  # pylint: disable=redefined-outer-name
+def pydex_client(network_id, web3_rpc_url, private_key):  # pylint: disable=redefined-outer-name
     """An instance of the pyDexClient object configured with the private key"""
     return PyDexClient(
-        network_id=NETWORK_ID,
+        network_id=network_id,
         web3_rpc_url=web3_rpc_url,
         private_key=private_key
     )
@@ -140,9 +146,8 @@ def pydex_client(web3_rpc_url, private_key):  # pylint: disable=redefined-outer-
 @pytest.fixture(scope="session")
 def make_veth_signed_order(
     asset_infos,  # pylint: disable=redefined-outer-name
-    web3_instance,  # pylint: disable=redefined-outer-name
-    private_key,  # pylint: disable=redefined-outer-name
-    my_address,  # pylint: disable=redefined-outer-name
+    web3_client,  # pylint: disable=redefined-outer-name
+    exchange_address,  # pylint: disable=redefined-outer-name
 ):
     """Create a new instance of a signed order"""
     def _make_veth_signed_order(  # pylint: disable=too-many-locals
@@ -150,7 +155,7 @@ def make_veth_signed_order(
         qty,
         price,
         side,
-        maker_address=my_address,  # pylint: disable=redefined-outer-name
+        maker_address=web3_client.account_address,
         expiration_time_secs=600,
         maker_fee="0",
         taker_fee="0",
@@ -158,20 +163,18 @@ def make_veth_signed_order(
         taker_address=NULL_ADDRESS,
         fee_recipient_address=NULL_ADDRESS,
         sender_address=NULL_ADDRESS,
-        exchange_address=EXCHANGE_ADDRESS,
-        web3_instance=web3_instance,  # pylint: disable=redefined-outer-name
-        private_key=private_key,  # pylint: disable=redefined-outer-name
-
+        exchange_address=exchange_address,  # pylint: disable=redefined-outer-name
+        web3_client=web3_client,  # pylint: disable=redefined-outer-name
     ):
         """ Convenience function for making valid orders to buy or sell
         SHORT or LONG assets against VETH.
 
         Keyword arguments:
-        asset_type -- str from {'LONG', 'SHORT'} to index into `full_asset_set_data`
-        qty -- how much of the ticker asset you want to buy against VETH
-        price -- Always in units of LONG or SHORT asset per VETH
-        side -- str from {'BUY', 'SELL'}
-        maker_address -- your address (defaults to MY_ADDRESS)
+        asset_type - - str from {'LONG', 'SHORT'} to index into `full_asset_set_data`
+        qty - - how much of the ticker asset you want to buy against VETH
+        price - - Always in units of LONG or SHORT asset per VETH
+        side - - str from {'BUY', 'SELL'}
+        maker_address - - your address(defaults to MY_ADDRESS)
         """
         asset_data = asset_infos.FULL_SET_ASSET_DATA[asset_type]
         if side == 'BUY':
@@ -209,8 +212,9 @@ def make_veth_signed_order(
         order.maker_asset_data = maker_asset_data
         order.taker_asset_data = taker_asset_data
         order.exchange_address = exchange_address
-        assert_valid(order.update().to_json(), "/orderSchema")
-        order.signature = sign_order(order.hash, web3_instance, private_key)
+        # sign the hash
+        order.signature = web3_client.sign_hash_0x_compat(order.update().hash)
+        # make sure the signed_order is valid
         assert_valid(order.to_json(), "/signedOrderSchema")
         return order
 

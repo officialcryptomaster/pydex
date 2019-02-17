@@ -128,8 +128,7 @@ class SignedOrder(db.Model):
         return self
 
     def update_hash(self):
-        """Update the hash of the order and return the order for chaining
-        """
+        """Update the hash of the order and return the order for chaining"""
         self.hash = self.get_order_hash_hex(self)
         return self
 
@@ -179,8 +178,7 @@ class SignedOrder(db.Model):
 
     @classmethod
     def get_order_hash_hex(cls, order):
-        """Calculate hash of an order as per 0x specification
-        """
+        """Calculate hash of an order as per 0x specification"""
         def pad_20_bytes_to_32(twenty_bytes: bytes):
             return bytes(12) + twenty_bytes
 
