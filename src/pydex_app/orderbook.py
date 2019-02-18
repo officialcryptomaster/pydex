@@ -34,7 +34,16 @@ class Orderbook:
         per_page=10
     ):
         """Get all bids to buy a `base_asset` by providing the `quote_asset`
-        (i.e. maker has `quote_asset` and wants to procure the `base_asset` from taker)
+        (i.e. bid is someone trying to buy the `base_asset` (`taker_asset`)
+        by supplying the `quote_asset` (`maker_asset`).
+
+        Keyword arguments:
+        base_asset -- string asset_data to buy (i.e. `taker_asset_data`)
+        quote_asset -- string asset_data to give in return (i.e. `maker_asset_data`)
+        full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to
+            the long and short asset_data that make up the full set. (one of
+            these must match the maker to taker asset, or will cause an
+            exception to be thrown)
         """
         bids = SignedOrder.query.filter_by(
             maker_asset_data=quote_asset,
@@ -71,7 +80,16 @@ class Orderbook:
         per_page=10
     ):
         """Get all asks to sell a `base_asset` against a `quote_asset`
-        (i.e. maker has `base_asset` and wants to procure the `quote_asset` from taker)
+        (i.e. ask is someone trying to sell the `base_asset` (`maker_asset`)
+        by collecting the `quote_asset` (`taker_asset`))
+
+        Keyword arguments:
+        base_asset -- string asset_data to sell (i.e. `make_asset_data`)
+        quote_asset -- string asset_data to get in return (i.e. `taker_asset_data`)
+        full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to
+            the long and short asset_data that make up the full set. (one of
+            these must match the maker to taker asset, or will cause an
+            exception to be thrown)
         """
         asks = SignedOrder.query.filter_by(
             maker_asset_data=base_asset,
@@ -108,9 +126,9 @@ class Orderbook:
         maker_asset -- string of maker asset id (a.k.a asset_data in 0x)
         taker_asset -- string of taker asset id (a.k.a asset_data in 0x)
         full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to
-            the long and short asset that make up the full set. one of these
-            must match the maker to taker asset or the function will throw
-            an exception
+            the long and short asset_data that make up the full set. (one of
+            these must match the maker to taker asset, or will cause an
+            exception to be thrown)
         """
         long_asset = full_asset_set["LONG"]
         short_asset = full_asset_set["SHORT"]

@@ -5,6 +5,7 @@ author: originalcryptomaster@gmail.com
 """
 
 import os
+import random
 import tempfile
 
 from decimal import Decimal
@@ -145,7 +146,7 @@ def make_veth_signed_order(
         expiration_time_secs=600,
         maker_fee="0",
         taker_fee="0",
-        salt=None,
+        salt="1234567890",
         taker_address=NULL_ADDRESS,
         fee_recipient_address=NULL_ADDRESS,
         sender_address=NULL_ADDRESS,
@@ -176,8 +177,8 @@ def make_veth_signed_order(
         else:
             raise Exception("side must be one of {'BUY', 'SELL'}")
 
-        if not salt:
-            salt = "1234567890"
+        if salt is None:
+            salt = "{:.0f}".format(Decimal(random.uniform(0, 9223372036854775807)))
         if not isinstance(maker_fee, str):
             maker_fee = to_base_unit_amount(maker_fee)
         if not isinstance(taker_fee, str):
