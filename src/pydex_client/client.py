@@ -7,6 +7,7 @@ import json
 import requests
 from zero_ex.json_schemas import assert_valid
 from utils.zeroexutils import ZeroExWeb3Client
+from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
 
 
 class PyDexClient(ZeroExWeb3Client):
@@ -56,8 +57,8 @@ class PyDexClient(ZeroExWeb3Client):
         base_asset_data,
         quote_asset_data,
         full_set_asset_data=None,
-        page=1,
-        per_page=20
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
     ):
         """Get a dict for querying the orderbook
 

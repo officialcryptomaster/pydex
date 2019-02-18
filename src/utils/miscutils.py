@@ -4,8 +4,10 @@ Miscellaneous Utilities
 author: officialcryptomaster@gmail.com
 """
 
+from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
 
-def paginate(arr, page=1, per_page=20):
+
+def paginate(arr, page=DEFAULT_PAGE, per_page=DEFAULT_PER_PAGE):
     """Given an ordered iterable like a list and a page number, return
     a slice of the iterable which whose elements make up the page.
 

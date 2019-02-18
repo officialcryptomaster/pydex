@@ -3,6 +3,7 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
+from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.order_watcher_client import OrderWatcherClient as owc
@@ -30,8 +31,8 @@ class Orderbook:
         base_asset,
         quote_asset,
         full_asset_set=None,
-        page=1,
-        per_page=10
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
     ):
         """Get all bids to buy a `base_asset` by providing the `quote_asset`
         (i.e. bid is someone trying to buy the `base_asset` (`taker_asset`)
@@ -76,8 +77,8 @@ class Orderbook:
         base_asset,
         quote_asset,
         full_asset_set=None,
-        page=1,
-        per_page=10
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
     ):
         """Get all asks to sell a `base_asset` against a `quote_asset`
         (i.e. ask is someone trying to sell the `base_asset` (`maker_asset`)
