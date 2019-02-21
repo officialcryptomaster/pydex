@@ -3,7 +3,10 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
-from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
+from decimal import Decimal
+from zero_ex.dev_utils import abi_utils
+from zero_ex.json_schemas import assert_valid
+from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE, MAX_INT, SELECTOR_LENGTH, ZERO
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.order_watcher_client import OrderWatcherClient as owc
@@ -11,12 +14,75 @@ from utils.miscutils import paginate
 
 
 class Orderbook:
-    """Abstraction for orderbook of signed orders
-    """
+    """Abstraction for orderbook of signed orders"""
     _owc = owc()
 
     def __init__(self):
         pass
+
+    @classmethod
+    def get_order_by_hash_if_exists(cls, order_hash):
+        """Retrieves a specific order by orderHash."""
+        signed_order_if_exists = SignedOrder.query.get_or_404(order_hash)
+        return {"order": signed_order_if_exists.to_json(), "metaData": {}}
+
+    '''
+    @classmethod
+    def asset_pair(
+        cls,
+        asset_data_a=None,
+        asset_data_b=None,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Retrieves a list of available asset pairs and the information
+        required to trade them
+        """
+        signed_orders = []
+
+        if asset_data_a and asset_data_b:
+            signed_orders = SignedOrder.query.filter_by(maker_asset_data=asset_data_a, taker_asset_data=asset_data_b)
+        elif asset_data_a:
+            signed_orders = SignedOrder.query.filter_by(maker_asset_data=asset_data_a)
+        elif asset_data_b:
+            signed_orders = SignedOrder.query.filter_by(taker_asset_data=asset_data_b)
+
+        def erc721_asset_data_to_asset(asset_data):
+            return {
+                "minAmount": ZERO,
+                "maxAmount": Decimal(1),
+                "precision": 0,
+                "assetData": asset_data
+            }
+
+        def erc20_asset_data_to_asset(asset_data):
+            return {
+                "minAmount": ZERO,
+                "maxAmount": MAX_INT,
+                "precision": DEFAULT_ERC20_DECIMALS,
+                "assetData": asset_data
+            }
+
+        def asset_data_to_asset(asset_data):
+            asset_proxy_id: str = asset_data[0:SELECTOR_LENGTH]
+            if asset_proxy_id == abi_utils.method_id("ERC20Token", ["address"]):
+                return erc20_asset_data_to_asset(asset_data)
+            if asset_proxy_id == abi_utils.method_id("ERC721Token", ["address"]):
+                return erc721_asset_data_to_asset(asset_data)
+            raise ValueError(f"Invalid asset data {str(asset_data)}")
+
+        def signed_order_to_asset_pair(signed_order: SignedOrder):
+            assert_valid(signed_order, "/signedOrderSchema")
+            return {
+                "asset_data_a": asset_data_to_asset(signed_order.maker_asset_data),
+                "asset_data_b": asset_data_to_asset(signed_order.taker_asset_data)
+            }
+
+        # TODO: Remove duplicate asset pairs
+        asset_pair_items = map(signed_order_to_asset_pair, map(SignedOrder.to_json, signed_orders))
+
+        return paginate(asset_pair_items, page=page, per_page=per_page)
+    '''
 
     @classmethod
     def add_order(cls, order):
@@ -116,6 +182,24 @@ class Orderbook:
             asks.extend([eq_bid.set_bid_as_sort_price() for eq_bid in eq_bids])
             asks = sorted(asks, key=lambda o: o.sort_price, reverse=True)
         return paginate(asks, page=page, per_page=per_page), asks_count
+
+    '''
+    @classmethod
+    def get_orders(
+        cls,
+        filter_params,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Retrieves a list of orders given query parameters."""
+
+        def order_to_api_order(signed_order):
+            return {"metaData": {}, "order": signed_order}
+        filter_object = {k: v for k, v in filter_params.items() if v is not None}
+        orders = SignedOrder.query.filter_by(**filter_object)
+        api_orders = map(order_to_api_order, orders)
+        return paginate(api_orders, page=page, per_page=per_page)
+    '''
 
     @classmethod
     def get_full_set_equivalent(cls, maker_asset, taker_asset, full_asset_set):
