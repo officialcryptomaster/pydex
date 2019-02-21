@@ -144,6 +144,8 @@ def post_order():
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/postOrder
     """
     current_app.logger.info("############ POSTING ORDER")
+    network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     current_app.logger.info(request.json)
     assert_valid(request.json, "/signedOrderSchema")
     order = SignedOrder.from_json(request.json, check_validity=True)
@@ -156,10 +158,19 @@ def post_order():
     )
 
 
-@sra.route('/v2/order/', methods=["GET"])
-def get_order_by_hash():
+@sra.route('/v2/order/<order_hash>', methods=["GET"])
+@cross_origin()
+def get_order_by_hash(order_hash):
     """GET Order endpoint retrieves the order by order hash.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrder
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ORDER BY HASH")
+    assert_valid(order_hash, "/orderHashSchema")
+    network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
+    res = Orderbook.get_order_by_hash_if_exists(order_hash=order_hash)
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )

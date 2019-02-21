@@ -4,7 +4,6 @@ Tests for SRA interface
 author: officialcryptomaster@gmail.com
 """
 from zero_ex.json_schemas import assert_valid
-from pydex_client.client import PyDexClient
 from pydex_app.db_models import SignedOrder
 
 
@@ -17,8 +16,9 @@ def test_query_orderbook(
         quote_asset_data=asset_infos.LONG_ASSET_DATA,
     )
     res = test_client.get(
-        PyDexClient.orderbook_url,
-        query_string=orderbook_params)
+        pydex_client.orderbook_url,
+        query_string=orderbook_params
+    )
     assert res.status_code == 200
     res = res.get_json()
     assert_valid(res, "/relayerApiOrderbookResponseSchema")
@@ -80,6 +80,9 @@ def test_post_order(
         json=order.to_json(),
     )
     assert res.status_code == 200
-    assert SignedOrder.query.filter_by(
-        hash=order.hash
-    ).count() == 1
+    # Retrieve order via get order endpoint
+    res = test_client.get(
+        "{}{}".format(pydex_client.get_order_url, order.hash)
+    )
+    assert res.status_code == 200
+    assert res.get_json()["order"] == order.to_json()
