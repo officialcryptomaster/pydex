@@ -9,7 +9,6 @@ from flask import request, render_template, Blueprint, current_app
 from flask_cors import cross_origin
 from zero_ex.contract_addresses import NetworkId
 from zero_ex.json_schemas import assert_valid
-from pydex_app.db_models import SignedOrder
 from pydex_app.orderbook import Orderbook
 from pydex_app.constants import NULL_ADDRESS
 
@@ -148,9 +147,7 @@ def post_order():
     assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     current_app.logger.info(request.json)
     assert_valid(request.json, "/signedOrderSchema")
-    order = SignedOrder.from_json(request.json, check_validity=True)
-    Orderbook.add_order(order=order)
-
+    Orderbook.add_order(json_order=request.json)
     return current_app.response_class(
         response={'success': True},
         status=200,

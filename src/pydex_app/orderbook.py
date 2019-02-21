@@ -85,8 +85,9 @@ class Orderbook:
     '''
 
     @classmethod
-    def add_order(cls, order):
+    def add_order(cls, json_order):
         """Add order to database and order watcher"""
+        order = SignedOrder.from_json(json_order, check_validity=True)
         cls._owc.add_order(signed_order=order.to_json())
         db.session.add(order)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
