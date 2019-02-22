@@ -56,7 +56,7 @@ def test_query_orderbook(
 def test_query_asset_pairs(
     test_client, pydex_client, asset_infos
 ):
-    """Test whether the app can return valid asset pair"""
+    """Test whether the app can return valid asset pairs"""
     expected_res = {
         'total': 1,
         'page': 1,
@@ -97,8 +97,18 @@ def test_query_asset_pairs(
     assert res.get_json() == expected_res
 
 
+def test_query_fee_recipients(
+    test_client, pydex_client
+):
+    """Test if app can return valid fee recipient(s)"""
+    res = test_client.get(
+        pydex_client.fee_recipients_url
+    )
+    assert res.status_code == 200
+
+
 def test_to_and_from_json_signed_order(
-    pydex_client,
+    pydex_client
 ):
     """Make sure creating a signed order from json does not change when it is turned back to json"""
     expected_order_json = {

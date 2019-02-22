@@ -18,6 +18,7 @@ class PyDexClient(ZeroExWeb3Client):
     post_order_url = "/v2/order"
     get_order_url = "/v2/order/"
     asset_pairs_url = "/v2/asset_pairs"
+    fee_recipients_url = "/v2/fee_recipients"
 
     def __init__(
         self,

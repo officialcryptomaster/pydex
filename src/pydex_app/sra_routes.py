@@ -157,8 +157,24 @@ def get_post_recipients():
     addresses for a relayer.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/v2/fee_recipients
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING FEE RECIPIENTS")
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    normalized_fee_recipient = current_app.config["PYDEX_ZRX_FEE_RECIPIENT"].lower()
+    fee_recipients = [normalized_fee_recipient]
+    res = {
+        "total": len(fee_recipients),
+        "perPage": per_page,
+        "page": page,
+        "records": fee_recipients
+    }
+    assert_valid(res, "/relayerApiFeeRecipientsResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/order', methods=["POST"])
