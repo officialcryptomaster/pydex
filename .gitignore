@@ -3,8 +3,9 @@
 *.swp
 *.swo
 
-# temp OS files
+# other temps files 
 .DS_Store
+.tmp/*
 
 # notebook checkpoints
 notebooks/.ipynb_checkpoints/*
