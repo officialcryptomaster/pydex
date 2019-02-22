@@ -149,7 +149,7 @@ class OrderUpdateHandler:
                 self.handle_fillable_order(order_hash)
         return res
 
-    def get_order_by_hash(self, order_hash):
+    def get_order_by_hash(self, order_hash):  # pylint: disable=no-self-use
         """Get an order by hash from the database.
 
         Keyword argument:
@@ -216,7 +216,7 @@ class OrderUpdateHandler:
             if commit:
                 self._commit_db()
 
-    def _commit_db(self):
+    def _commit_db(self):  # pylint: disable=no-self-use
         LOGGER.debug("commit changes to DB...")
         db.session.commit()  # pylint: disable=no-member
 
