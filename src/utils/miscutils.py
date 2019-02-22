@@ -38,7 +38,7 @@ def try_(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception:  # pylint: disable=broad-except
-        return None
+        return _default_val
 
 
 def paginate(arr, page=1, per_page=20):

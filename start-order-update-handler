@@ -1,8 +1,9 @@
 source start-order-watcher-server
+sleep 1
 source pydex_env/bin/activate
 
 export ORDER_UPDATE_HANDLER_LOG_FILE="./logs/order_update_handler.log"
-alias get-order-update-handler-pid="ps -aef | grep -v grep | grep 'python3 src/pydex_app/order_update_handler.py' | tr -s ' ' | cut -d ' ' -f 4" 
+alias get-order-update-handler-pid="ps -aef | grep -v grep | grep 'python3 src/pydex_app/order_update_handler.py' | tr -s ' ' | cut -d ' ' -f 3" 
 export ORDER_UPDATE_HANDLER_PID=`get-order-update-handler-pid`
 
 if [[ $ORDER_UPDATE_HANDLER_PID ]]; then
