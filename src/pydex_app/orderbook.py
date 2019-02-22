@@ -5,22 +5,17 @@ author: officialcryptomaster@gmail.com
 """
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
-from pydex_app.order_watcher_client import OrderWatcherClient as owc
 from utils.miscutils import paginate
 
 
 class Orderbook:
-    """Abstraction for orderbook of signed orders
-    """
-    _owc = owc()
-
-    def __init__(self):
-        pass
+    """Abstraction for orderbook of signed orders"""
 
     @classmethod
     def add_order(cls, order):
-        """Add order to database and order watcher"""
-        cls._owc.add_order(signed_order=order.to_json())
+        """Add order to database without any validity checks.
+        Note: OrderStatusHandler will check the status and activate orders
+        by adding them to handler"""
         db.session.add(order)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
 
@@ -45,9 +40,10 @@ class Orderbook:
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
         """
-        bids = SignedOrder.query.filter_by(
-            maker_asset_data=quote_asset,
-            taker_asset_data=base_asset,
+        bids = SignedOrder.query.filter(
+            (SignedOrder.maker_asset_data == quote_asset)
+            & (SignedOrder.taker_asset_data == base_asset)
+            & (SignedOrder.order_status > 0)
         )
         bids_count = bids.count()
         bids = bids.order_by(
@@ -57,12 +53,14 @@ class Orderbook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=quote_asset, taker_asset=base_asset,
+                maker_asset=quote_asset,
+                taker_asset=base_asset,
                 full_asset_set=full_asset_set
             )
-            eq_asks = SignedOrder.query.filter_by(
-                maker_asset_data=eq_maker_asset,
-                taker_asset_data=eq_taker_asset
+            eq_asks = SignedOrder.query.filter(
+                (SignedOrder.maker_asset_data == eq_maker_asset)
+                & (SignedOrder.taker_asset_data == eq_taker_asset)
+                & (SignedOrder.order_status > 0)
             )
             bids_count += eq_asks.count()
             bids = [bid.set_bid_as_sort_price() for bid in bids]
@@ -91,9 +89,10 @@ class Orderbook:
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
         """
-        asks = SignedOrder.query.filter_by(
-            maker_asset_data=base_asset,
-            taker_asset_data=quote_asset,
+        asks = SignedOrder.query.filter(
+            (SignedOrder.maker_asset_data == base_asset)
+            & (SignedOrder.taker_asset_data == quote_asset)
+            & (SignedOrder.order_status > 0)
         )
         asks_count = asks.count()
         asks = asks.order_by(
@@ -103,12 +102,14 @@ class Orderbook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=base_asset, taker_asset=quote_asset,
+                maker_asset=base_asset,
+                taker_asset=quote_asset,
                 full_asset_set=full_asset_set
             )
-            eq_bids = SignedOrder.query.filter_by(
-                maker_asset_data=eq_maker_asset,
-                taker_asset_data=eq_taker_asset
+            eq_bids = SignedOrder.query.filter(
+                (SignedOrder.maker_asset_data == eq_maker_asset)
+                & (SignedOrder.taker_asset_data == eq_taker_asset)
+                & (SignedOrder.order_status > 0)
             )
             asks_count += eq_bids.count()
             asks = [ask.set_ask_as_sort_price() for ask in asks]
