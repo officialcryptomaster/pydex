@@ -1,0 +1,17 @@
+source start-order-watcher-server
+source pydex_env/bin/activate
+
+export ORDER_UPDATE_HANDLER_LOG_FILE="./logs/order_update_handler.log"
+alias get-order-update-handler-pid="ps -aef | grep -v grep | grep 'python3 src/pydex_app/order_update_handler.py' | tr -s ' ' | cut -d ' ' -f 4" 
+export ORDER_UPDATE_HANDLER_PID=`get-order-update-handler-pid`
+
+if [[ $ORDER_UPDATE_HANDLER_PID ]]; then
+    echo "order-update-handler is already running at process-id $ORDER_UPDATE_HANDLER_PID"
+else
+    echo "########################################## starting order update handler..." >> $ORDER_UPDATE_HANDLER_LOG_FILE | tee 
+    PYTHONPATH=./src python3 src/pydex_app/order_update_handler.py >> $ORDER_UPDATE_HANDLER_LOG_FILE 2>&1 &
+    sleep 1
+    export ORDER_UPDATE_HANDLER_PID=`get-order-update-handler-pid`
+    echo "order update handler successfully launched with proess-id $ORDER_UPDATE_HANDLER_PID" 
+fi
+
