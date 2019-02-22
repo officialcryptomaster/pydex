@@ -4,49 +4,86 @@ Database models of common objects
 author: officialcryptomaster@gmail.com
 """
 from decimal import Decimal
+from enum import Enum
 from zero_ex.json_schemas import assert_valid
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.constants import NULL_ADDRESS
 from pydex_app.constants import ZERO_STR, MAX_INT_STR
 from utils.zeroexutils import ZeroExWeb3Client
+from utils.miscutils import try_, now_epoch_msecs, epoch_secs_to_local_time_str, epoch_msecs_to_local_time_str
+
+
+class OrderStatus(Enum):
+    """Enumeration of order statuses.
+    Guarantees that:
+    - 0 means there is no obvious problems but it may be unfundable
+    - positive status means order is confirmed to be fillable
+    - negative status means order is confirmed to not be fillable
+    """
+    INVALID = -10  # We will probably never insert these into the database
+    UNFILLABLE_UNFUNDED = -7
+    UNFILLABLE_CANCELLED_PARTIALLY_FILLED = -6
+    UNFILLABLE_CANCELLED = -5
+    UNFILLABLE_EXPIRED_PARTIALLY_FILLED = -4
+    UNFILLABLE_EXPIRED = -3
+    UNFILLABLE_FILLED = -2
+    UNFILLABLE = -1
+    MAYBE_FILLABLE = 0
+    FILLABLE = 1
+    FILLABLE_FULLY = 2
+    FILLABLE_PARTIALLY = 3
 
 
 class SignedOrder(db.Model):
     """SignedOrder model which provides persistence and convenience
     methods around dealing with 0x SignedOrder type
     """
-    # it faster and easier to work with order_utils
     hash = db.Column(db.String(42), unique=True, primary_key=True)  # pylint: disable=no-member
+    # ETH addresses are 40 bytes (add 2 more bytes for leading '0x')
     maker_address = db.Column(db.String(42), nullable=False)  # pylint: disable=no-member
     taker_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
-    maker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
-    taker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
-    sender_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
-    maker_asset_amount = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
-    taker_asset_amount = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
-    maker_asset_data = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
-    taker_asset_data = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
-    salt = db.Column(db.String(128), nullable=False)  # pylint: disable=no-member
     exchange_address = db.Column(db.String(42), nullable=False)  # pylint: disable=no-member
     fee_recipient_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
+    sender_address = db.Column(db.String(42), default=NULL_ADDRESS)  # pylint: disable=no-member
+    # in theory, amounts can be 32 bytes, in practive, we will only allow 16 bytes
+    maker_asset_amount = db.Column(db.String(32), nullable=False)  # pylint: disable=no-member
+    taker_asset_amount = db.Column(db.String(32), nullable=False)  # pylint: disable=no-member
+    # while in theory fees can be 32 bytes, in practice, we will allow 16 bytes
+    maker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
+    taker_fee = db.Column(db.String(32), default="0")  # pylint: disable=no-member
+    # salt is 32 bytes or 256 bits which is at most 78 chars in decimal
+    salt = db.Column(db.String(78), nullable=False)  # pylint: disable=no-member
+    # integer seconds since unix epoch (interpret as UTC timestamp)
     expiration_time_secs = db.Column(db.Integer, nullable=False)  # pylint: disable=no-member
+    # asset data for ERC20 is 36 bytes, and 68 bytes for ERC721, so that is a
+    # maximum of 132 hex chars plus 2 chars for the leading '0x'
+    maker_asset_data = db.Column(db.String(134), nullable=False)  # pylint: disable=no-member
+    taker_asset_data = db.Column(db.String(134), nullable=False)  # pylint: disable=no-member
     signature = db.Column(db.String(256), nullable=False)  # pylint: disable=no-member
-    bid_price = db.Column(db.String(128))  # pylint: disable=no-member
-    ask_price = db.Column(db.String(128))  # pylint: disable=no-member
+    bid_price = db.Column(db.String(32))  # pylint: disable=no-member
+    ask_price = db.Column(db.String(32))  # pylint: disable=no-member
+    # integer milliseconds since unix epoch when record was created (interpret as UTC timestamp)
+    created_at = db.Column(db.Integer,  # pylint: disable=no-member
+                           nullable=False,
+                           default=now_epoch_msecs)
+    # integer milliseconds since unix epoch since last update to record (interpret as UTC timestamp)
+    last_updated_at = db.Column(db.Integer,  # pylint: disable=no-member
+                                nullable=False,
+                                default=now_epoch_msecs,
+                                onupdate=now_epoch_msecs)
+    # integer status from `OrderStatus` enum.
+    order_status = db.Column(db.Integer,  # pylint: disable=no-member
+                             index=True,
+                             nullable=False,
+                             default=OrderStatus.MAYBE_FILLABLE.value)
+    # cumulative taker fill amount from order that has actually been filled
+    fill_amount = db.Column(db.String(32))  # pylint: disable=no-member
     _sort_price = None  # not a DB column
 
-    @property
-    def sort_price(self):
-        """Get a price for sorting orders
-        This is useful for full set order which result in a mix of bids and asks
-        (hint: make use of `set_bid_price_as_sort_price` and its equivalent
-        `set_bid_price_as_sort_price`)
-        """
-        return self._sort_price
-
-    def __repr__(self):
+    def __str__(self):
         return (
             f"[SignedOrder](hash={self.hash}"
+            f" | order_status={try_(OrderStatus, self.order_status)}"
             f" | bid_price={self.bid_price}"
             f" | ask_price={self.ask_price}"
             f" | maker_asset_amount={self.maker_asset_amount}"
@@ -55,9 +92,12 @@ class SignedOrder(db.Model):
             f" | taker_asset_data={self.taker_asset_data}"
             f" | maker_address={self.maker_address}"
             f" | taker_address={self.taker_address}"
+            f" | expires={try_(epoch_secs_to_local_time_str, self.expiration_time_secs)}"
+            f" | create_at={try_(epoch_msecs_to_local_time_str, self.created_at)}"
+            f" | last_updated_at={try_(epoch_msecs_to_local_time_str, self.last_updated_at)}"
         )
 
-    __str__ = __repr__
+    __repr__ = __str__
 
     def to_json(
         self,
@@ -128,6 +168,15 @@ class SignedOrder(db.Model):
         except:  # noqa E722 pylint: disable=bare-except
             self.ask_price = default_price
         return self
+
+    @property
+    def sort_price(self):
+        """Get a price for sorting orders
+        This is useful for full set order which result in a mix of bids and asks
+        (hint: make use of `set_bid_price_as_sort_price` and its equivalent
+        `set_bid_price_as_sort_price`)
+        """
+        return self._sort_price
 
     def set_bid_as_sort_price(self):
         """Set the self._sort_price field to be the self.bid_price
