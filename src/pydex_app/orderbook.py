@@ -3,10 +3,9 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
-from decimal import Decimal
 from zero_ex.dev_utils import abi_utils
-from zero_ex.json_schemas import assert_valid
-from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE, MAX_INT, SELECTOR_LENGTH, ZERO
+from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE
+from pydex_app.constants import MAX_INT_STR, SELECTOR_LENGTH, ZERO_STR
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.order_watcher_client import OrderWatcherClient as owc
@@ -26,9 +25,8 @@ class Orderbook:
         signed_order_if_exists = SignedOrder.query.get_or_404(order_hash)
         return {"order": signed_order_if_exists.to_json(), "metaData": {}}
 
-    '''
     @classmethod
-    def asset_pair(
+    def get_asset_pairs(
         cls,
         asset_data_a=None,
         asset_data_b=None,
@@ -38,27 +36,32 @@ class Orderbook:
         """Retrieves a list of available asset pairs and the information
         required to trade them
         """
-        signed_orders = []
-
+        asset_pairs = []
         if asset_data_a and asset_data_b:
-            signed_orders = SignedOrder.query.filter_by(maker_asset_data=asset_data_a, taker_asset_data=asset_data_b)
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter_by(maker_asset_data=asset_data_a, taker_asset_data=asset_data_b)
         elif asset_data_a:
-            signed_orders = SignedOrder.query.filter_by(maker_asset_data=asset_data_a)
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(maker_asset_data=asset_data_a)
         elif asset_data_b:
-            signed_orders = SignedOrder.query.filter_by(taker_asset_data=asset_data_b)
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(taker_asset_data=asset_data_b)
+
+        unique_asset_pairs = set(asset_pairs)
 
         def erc721_asset_data_to_asset(asset_data):
             return {
-                "minAmount": ZERO,
-                "maxAmount": Decimal(1),
+                "minAmount": ZERO_STR,
+                "maxAmount": "1",
                 "precision": 0,
                 "assetData": asset_data
             }
 
         def erc20_asset_data_to_asset(asset_data):
             return {
-                "minAmount": ZERO,
-                "maxAmount": MAX_INT,
+                "minAmount": ZERO_STR,
+                "maxAmount": MAX_INT_STR,
                 "precision": DEFAULT_ERC20_DECIMALS,
                 "assetData": asset_data
             }
@@ -71,18 +74,14 @@ class Orderbook:
                 return erc721_asset_data_to_asset(asset_data)
             raise ValueError(f"Invalid asset data {str(asset_data)}")
 
-        def signed_order_to_asset_pair(signed_order: SignedOrder):
-            assert_valid(signed_order, "/signedOrderSchema")
+        def get_asset_pair_data(asset_pair):
             return {
-                "asset_data_a": asset_data_to_asset(signed_order.maker_asset_data),
-                "asset_data_b": asset_data_to_asset(signed_order.taker_asset_data)
+                "assetDataA": asset_data_to_asset(asset_pair[0]),
+                "assetDataB": asset_data_to_asset(asset_pair[1])
             }
 
-        # TODO: Remove duplicate asset pairs
-        asset_pair_items = map(signed_order_to_asset_pair, map(SignedOrder.to_json, signed_orders))
-
-        return paginate(asset_pair_items, page=page, per_page=per_page)
-    '''
+        asset_pairs_data = [get_asset_pair_data(asset_pair) for asset_pair in list(unique_asset_pairs)]
+        return paginate(asset_pairs_data, page=page, per_page=per_page), len(asset_pairs_data)
 
     @classmethod
     def add_order(cls, json_order):

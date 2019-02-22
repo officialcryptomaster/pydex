@@ -17,6 +17,7 @@ class PyDexClient(ZeroExWeb3Client):
     orderbook_url = "/v2/orderbook"
     post_order_url = "/v2/order"
     get_order_url = "/v2/order/"
+    asset_pairs_url = "/v2/asset_pairs"
 
     def __init__(
         self,
@@ -52,6 +53,30 @@ class PyDexClient(ZeroExWeb3Client):
         )
 
     __repr__ = __str__
+
+    def make_asset_pairs_query(
+        self,
+        asset_data_a,
+        asset_data_b,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Get a dict for querying the orderbook for relevant asset pairs
+
+        Keyword arguments:
+        asset_data_a -- hexstr value for the first asset in the pair
+        asset_data_b -- hexstr value for the second asset in the pair
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
+        """
+        params = dict(
+            assetDataA=asset_data_a,
+            assetDataB=asset_data_b,
+            networkId=self._network_id,
+            page=page,
+            per_page=per_page,
+        )
+        return params
 
     def make_orderbook_query(
         self,

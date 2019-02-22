@@ -29,8 +29,33 @@ def get_asset_pairs():
     information required to trade them.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getAssetPairs
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ASSET PAIRS")
+    network_id = NetworkId(int(request.args.get("networkId"))).value
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], \
+        f"networkId={network_id} not supported"
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    asset_data_a = request.args["assetDataA"]
+    asset_data_b = request.args["assetDataB"]
+    asset_pairs, asset_pairs_count = Orderbook.get_asset_pairs(
+        asset_data_a=asset_data_a,
+        asset_data_b=asset_data_b,
+        page=page,
+        per_page=per_page
+    )
+    res = {
+        "total": asset_pairs_count,
+        "perPage": per_page,
+        "page": page,
+        "records": asset_pairs
+    }
+    # assert_valid(res, "/relayerApiAssetDataPairsResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route("/v2/orders", methods=["GET"])
@@ -166,6 +191,7 @@ def get_order_by_hash(order_hash):
     network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
     assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     res = Orderbook.get_order_by_hash_if_exists(order_hash=order_hash)
+    assert_valid(res, "/relayerApiOrderSchema")
     return current_app.response_class(
         response=json.dumps(res),
         status=200,

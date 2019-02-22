@@ -4,7 +4,32 @@ Tests for SRA interface
 author: officialcryptomaster@gmail.com
 """
 from zero_ex.json_schemas import assert_valid
+from pydex_app.constants import DEFAULT_ERC20_DECIMALS, MAX_INT_STR, ZERO_STR
 from pydex_app.db_models import SignedOrder
+
+
+def test_post_order(
+    test_client, pydex_client, make_veth_signed_order
+):
+    """Make sure posting order returns success and order exists
+    in database."""
+    order = make_veth_signed_order(
+        asset_type="LONG",
+        qty=0.0001,
+        price=0.5,
+        side="BUY",
+    )
+    res = test_client.post(
+        pydex_client.post_order_url,
+        json=order.to_json(),
+    )
+    assert res.status_code == 200
+    # Retrieve order via get order endpoint
+    res = test_client.get(
+        "{}{}".format(pydex_client.get_order_url, order.hash)
+    )
+    assert res.status_code == 200
+    assert res.get_json()["order"] == order.to_json()
 
 
 def test_query_orderbook(
@@ -26,6 +51,45 @@ def test_query_orderbook(
     #     'asks': {'page': 1, 'perPage': 20, 'records': [], 'total': 0},
     #     'bids': {'page': 1, 'perPage': 20, 'records': [], 'total': 0}}
     # assert res == expected_res
+
+
+def test_query_asset_pairs(
+    test_client, pydex_client, asset_infos
+):
+    """Test whether the app can return valid asset pair"""
+    asset_pairs_params = pydex_client.make_asset_pairs_query(
+        asset_data_a=asset_infos.VETH_ASSET_DATA,
+        asset_data_b=asset_infos.LONG_ASSET_DATA,
+    )
+    res = test_client.get(
+        pydex_client.asset_pairs_url,
+        query_string=asset_pairs_params
+    )
+    assert res.status_code == 200
+    expected_res = {
+        'total': 1,
+        'page': 1,
+        'perPage': 20,
+        'records': [
+            {
+                'assetDataA': {
+                    'minAmount': ZERO_STR,
+                    'maxAmount': MAX_INT_STR,
+                    'precision': DEFAULT_ERC20_DECIMALS,
+                    'assetData': asset_infos.VETH_ASSET_DATA
+                },
+                'assetDataB': {
+                    'minAmount': ZERO_STR,
+                    'maxAmount': MAX_INT_STR,
+                    'precision': DEFAULT_ERC20_DECIMALS,
+                    'assetData': asset_infos.LONG_ASSET_DATA
+                }
+            }
+        ]
+    }
+    print(res.get_json())
+    print(expected_res)
+    assert res.get_json() == expected_res
 
 
 def test_to_and_from_json_signed_order(
@@ -62,27 +126,3 @@ def test_to_and_from_json_signed_order(
     # sign the order
     order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
     assert order.to_json(include_hash=True) == expected_order_json
-
-
-def test_post_order(
-    test_client, pydex_client, make_veth_signed_order
-):
-    """Make sure posting order returns success and order exists
-    in database."""
-    order = make_veth_signed_order(
-        asset_type="LONG",
-        qty=0.0001,
-        price=0.5,
-        side="BUY",
-    )
-    res = test_client.post(
-        pydex_client.post_order_url,
-        json=order.to_json(),
-    )
-    assert res.status_code == 200
-    # Retrieve order via get order endpoint
-    res = test_client.get(
-        "{}{}".format(pydex_client.get_order_url, order.hash)
-    )
-    assert res.status_code == 200
-    assert res.get_json()["order"] == order.to_json()
