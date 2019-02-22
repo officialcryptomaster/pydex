@@ -14,11 +14,12 @@ class PyDexClient(ZeroExWeb3Client):
     """PyDEX Client to interact with PyDEX app"""
 
     __name__ = "PyDexClient"
-    orderbook_url = "/v2/orderbook"
-    post_order_url = "/v2/order"
-    get_order_url = "/v2/order/"
     asset_pairs_url = "/v2/asset_pairs"
     fee_recipients_url = "/v2/fee_recipients"
+    get_order_url = "/v2/order/"
+    get_orders_url = "/v2/orders"
+    orderbook_url = "/v2/orderbook"
+    post_order_url = "/v2/order"
 
     def __init__(
         self,
@@ -73,6 +74,52 @@ class PyDexClient(ZeroExWeb3Client):
         params = dict(
             assetDataA=asset_data_a,
             assetDataB=asset_data_b,
+            networkId=self._network_id,
+            page=page,
+            per_page=per_page,
+        )
+        return params
+
+    def make_orders_query(
+        self,
+        maker_asset_proxy_id=None,
+        taker_asset_proxy_id=None,
+        maker_asset_address=None,
+        taker_asset_address=None,
+        exchange_address=None,
+        sender_address=None,
+        maker_asset_data=None,
+        taker_asset_data=None,
+        trader_asset_data=None,
+        maker_address=None,
+        taker_address=None,
+        trader_address=None,
+        fee_recipient_address=None,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Get a dict for querying the orderbook for relevant asset pairs
+
+        Keyword arguments:
+        asset_data_a -- hexstr value for the first asset in the pair
+        asset_data_b -- hexstr value for the second asset in the pair
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
+        """
+        params = dict(
+            makerAssetProxyId=maker_asset_proxy_id,
+            takerAssetProxyId=taker_asset_proxy_id,
+            makerAssetAddress=maker_asset_address,
+            takerAssetAddress=taker_asset_address,
+            exchangeAddress=exchange_address,
+            senderAddress=sender_address,
+            makerAssetData=maker_asset_data,
+            takerAssetData=taker_asset_data,
+            traderAssetData=trader_asset_data,
+            makerAddress=maker_address,
+            takerAddress=taker_address,
+            traderAddress=trader_address,
+            feeRecipientAddress=fee_recipient_address,
             networkId=self._network_id,
             page=page,
             per_page=per_page,

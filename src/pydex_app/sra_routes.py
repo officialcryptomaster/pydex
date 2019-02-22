@@ -50,7 +50,7 @@ def get_asset_pairs():
         "page": page,
         "records": asset_pairs
     }
-    # assert_valid(res, "/relayerApiAssetDataPairsResponseSchema")
+    assert_valid(res, "/relayerApiAssetDataPairsResponseSchema")
     return current_app.response_class(
         response=json.dumps(res),
         status=200,
@@ -59,12 +59,47 @@ def get_asset_pairs():
 
 
 @sra.route("/v2/orders", methods=["GET"])
+@cross_origin()
 def get_orders():
     """GET Orders endpoint retrieves a list of orders given query parameters.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ORDERS")
+    network_id = NetworkId(int(request.args.get("networkId"))).value
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], \
+        f"networkId={network_id} not supported"
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    orders, orders_count = Orderbook.get_orders(
+        maker_asset_proxy_id=request.args.get("makerAssetProxyId"),
+        taker_asset_proxy_id=request.args.get("takerAssetProxyId"),
+        maker_asset_address=request.args.get("makerAssetAddress"),
+        taker_asset_address=request.args.get("takerAssetAddress"),
+        exchange_address=request.args.get("exchangeAddress"),
+        sender_address=request.args.get("takerAssetAddress"),
+        maker_asset_data=request.args.get("makerAssetData") or request.args.get(
+            "traderAssetData"),
+        taker_asset_data=request.args.get("takerAssetData") or request.args.get(
+            "traderAssetData"),
+        maker_address=request.args.get("makerAddress") or request.args.get("traderAddress"),
+        taker_address=request.args.get("takerAddress") or request.args.get("traderAddress"),
+        fee_recipient_address=request.args.get("feeRecipient"),
+        page=page,
+        per_page=per_page,
+    )
+    res = {
+        "total": orders_count,
+        "perPage": per_page,
+        "page": page,
+        "records": orders
+    }
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/orderbook', methods=["GET"])
@@ -152,6 +187,7 @@ def post_order_config():
 
 
 @sra.route('/v2/fee_recipients', methods=["GET"])
+@cross_origin()
 def get_post_recipients():
     """GET FeeRecepients endpoint retrieves a collection of all fee recipient
     addresses for a relayer.

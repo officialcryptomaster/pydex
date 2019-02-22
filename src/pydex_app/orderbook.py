@@ -4,12 +4,13 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 author: officialcryptomaster@gmail.com
 """
 from zero_ex.dev_utils import abi_utils
+from zero_ex.order_utils import asset_data_utils as adu
 from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE
 from pydex_app.constants import MAX_INT_STR, SELECTOR_LENGTH, ZERO_STR
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from pydex_app.order_watcher_client import OrderWatcherClient as owc
-from utils.miscutils import paginate
+from utils.miscutils import paginate, to_api_order
 
 
 class Orderbook:
@@ -23,7 +24,7 @@ class Orderbook:
     def get_order_by_hash_if_exists(cls, order_hash):
         """Retrieves a specific order by orderHash."""
         signed_order_if_exists = SignedOrder.query.get_or_404(order_hash)
-        return {"order": signed_order_if_exists.to_json(), "metaData": {}}
+        return to_api_order(signed_order_if_exists.to_json())
 
     @classmethod
     def get_asset_pairs(
@@ -49,7 +50,6 @@ class Orderbook:
                 SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(taker_asset_data=asset_data_b)
         else:
             asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
-
         unique_asset_pairs = set(asset_pairs)
 
         def erc721_asset_data_to_asset(asset_data):
@@ -185,23 +185,45 @@ class Orderbook:
             asks = sorted(asks, key=lambda o: o.sort_price, reverse=True)
         return paginate(asks, page=page, per_page=per_page), asks_count
 
-    '''
     @classmethod
     def get_orders(
         cls,
-        filter_params,
+        maker_asset_proxy_id=None,
+        taker_asset_proxy_id=None,
+        maker_asset_address=None,
+        taker_asset_address=None,
+        exchange_address=None,
+        sender_address=None,
+        maker_asset_data=None,
+        taker_asset_data=None,
+        maker_address=None,
+        taker_address=None,
+        fee_recipient_address=None,
         page=DEFAULT_PAGE,
         per_page=DEFAULT_PER_PAGE
     ):
         """Retrieves a list of orders given query parameters."""
-
-        def order_to_api_order(signed_order):
-            return {"metaData": {}, "order": signed_order}
-        filter_object = {k: v for k, v in filter_params.items() if v is not None}
+        encoded_maker_asset_data = None
+        if maker_asset_address:
+            encoded_maker_asset_data = adu.encode_erc20_asset_data(maker_asset_address)
+        encoded_taker_asset_data = None
+        if taker_asset_address:
+            encoded_taker_asset_data = adu.encode_erc20_asset_data(taker_asset_address)
+        pre_filter = dict(
+            maker_asset_proxy_id=maker_asset_proxy_id,
+            taker_asset_proxy_id=taker_asset_proxy_id,
+            exchange_address=exchange_address,
+            sender_address=sender_address,
+            maker_asset_data=maker_asset_data or encoded_maker_asset_data,
+            taker_asset_data=taker_asset_data or encoded_taker_asset_data,
+            maker_address=maker_address,
+            taker_address=taker_address,
+            fee_recipient_address=fee_recipient_address
+        )
+        filter_object = {k: v for k, v in pre_filter.items() if v is not None}
         orders = SignedOrder.query.filter_by(**filter_object)
-        api_orders = map(order_to_api_order, orders)
-        return paginate(api_orders, page=page, per_page=per_page)
-    '''
+        api_orders = [to_api_order(order.to_json()) for order in orders]
+        return paginate(api_orders, page=page, per_page=per_page), len(api_orders)
 
     @classmethod
     def get_full_set_equivalent(cls, maker_asset, taker_asset, full_asset_set):

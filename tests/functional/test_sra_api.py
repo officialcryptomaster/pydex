@@ -29,7 +29,30 @@ def test_post_order(
         "{}{}".format(pydex_client.get_order_url, order.hash)
     )
     assert res.status_code == 200
-    assert res.get_json()["order"] == order.to_json()
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrderSchema")
+    assert res["order"] == order.to_json()
+
+
+def test_query_orders(
+    test_client, pydex_client, asset_infos
+):
+    """Test whether the app can return a valid list of orders,
+    filtered by query params
+    """
+    orders_params = pydex_client.make_orders_query(
+        maker_asset_data=asset_infos.VETH_ASSET_DATA,
+        taker_asset_data=asset_infos.LONG_ASSET_DATA
+    )
+    res = test_client.get(
+        pydex_client.get_orders_url,
+        query_string=orders_params
+    )
+    assert res.status_code == 200
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    assert res["records"][0]["order"]["makerAssetData"] == asset_infos.VETH_ASSET_DATA
+    assert res["records"][0]["order"]["takerAssetData"] == asset_infos.LONG_ASSET_DATA
 
 
 def test_query_orderbook(

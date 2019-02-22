@@ -19,3 +19,8 @@ def paginate(arr, page=DEFAULT_PAGE, per_page=DEFAULT_PER_PAGE):
     """
     page_idx = page - 1
     return arr[page_idx: page_idx+per_page]
+
+
+def to_api_order(signed_order_json):
+    """Given a signed order json, make compatible with 0x API Order Schema"""
+    return {"metaData": {}, "order": signed_order_json}
