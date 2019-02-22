@@ -56,8 +56,8 @@ class PyDexClient(ZeroExWeb3Client):
 
     def make_asset_pairs_query(
         self,
-        asset_data_a,
-        asset_data_b,
+        asset_data_a=None,
+        asset_data_b=None,
         page=DEFAULT_PAGE,
         per_page=DEFAULT_PER_PAGE
     ):

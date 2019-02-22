@@ -57,15 +57,6 @@ def test_query_asset_pairs(
     test_client, pydex_client, asset_infos
 ):
     """Test whether the app can return valid asset pair"""
-    asset_pairs_params = pydex_client.make_asset_pairs_query(
-        asset_data_a=asset_infos.VETH_ASSET_DATA,
-        asset_data_b=asset_infos.LONG_ASSET_DATA,
-    )
-    res = test_client.get(
-        pydex_client.asset_pairs_url,
-        query_string=asset_pairs_params
-    )
-    assert res.status_code == 200
     expected_res = {
         'total': 1,
         'page': 1,
@@ -87,8 +78,22 @@ def test_query_asset_pairs(
             }
         ]
     }
-    print(res.get_json())
-    print(expected_res)
+    asset_pairs_params = pydex_client.make_asset_pairs_query(
+        asset_data_a=asset_infos.VETH_ASSET_DATA,
+        asset_data_b=asset_infos.LONG_ASSET_DATA,
+    )
+    res = test_client.get(
+        pydex_client.asset_pairs_url,
+        query_string=asset_pairs_params
+    )
+    assert res.status_code == 200
+    assert res.get_json() == expected_res
+    asset_pairs_params = pydex_client.make_asset_pairs_query()
+    res = test_client.get(
+        pydex_client.asset_pairs_url,
+        query_string=asset_pairs_params
+    )
+    assert res.status_code == 200
     assert res.get_json() == expected_res
 
 

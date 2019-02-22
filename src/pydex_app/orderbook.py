@@ -47,6 +47,8 @@ class Orderbook:
         elif asset_data_b:
             asset_pairs = SignedOrder.query.with_entities(
                 SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(taker_asset_data=asset_data_b)
+        else:
+            asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
 
         unique_asset_pairs = set(asset_pairs)
 

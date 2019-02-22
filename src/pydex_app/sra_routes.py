@@ -36,8 +36,8 @@ def get_asset_pairs():
     page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
     per_page = int(request.args.get(
         "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
-    asset_data_a = request.args["assetDataA"]
-    asset_data_b = request.args["assetDataB"]
+    asset_data_a = request.args.get("assetDataA")
+    asset_data_b = request.args.get("assetDataB")
     asset_pairs, asset_pairs_count = Orderbook.get_asset_pairs(
         asset_data_a=asset_data_a,
         asset_data_b=asset_data_b,
