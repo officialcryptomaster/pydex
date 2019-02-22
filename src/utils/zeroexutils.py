@@ -3,6 +3,7 @@
 
 author: officialcryptomaster@gmail.com
 """
+from enum import Enum
 from eth_utils import keccak
 from hexbytes import HexBytes
 from zero_ex.contract_artifacts import abi_by_name
@@ -40,6 +41,47 @@ EIP712_DOMAIN_STRUCT_HEADER = (
     + keccak(b"0x Protocol")
     + keccak(b"2")
 )
+
+
+class ZrxOrderStatus(Enum):
+    """OrderStatus codes used by 0x contracts"""
+    INVALID = 0  # Default value
+    INVALID_MAKER_ASSET_AMOUNT = 1  # Order does not have a valid maker asset amount
+    INVALID_TAKER_ASSET_AMOUNT = 2  # Order does not have a valid taker asset amount
+    FILLABLE = 3  # Order is fillable
+    EXPIRED = 4  # Order has already expired
+    FULLY_FILLED = 5  # Order is fully filled
+    CANCELLED = 6  # Order has been cancelled
+
+
+class ZrxOrderInfo:  # pylint: disable=too-few-public-methods
+    """A Web3-compatible representation of the Exchange.OrderInfo struct"""
+
+    __name__ = "OrderInfo"
+
+    def __init__(
+        self,
+        order_status,
+        order_hash,
+        order_taker_asset_filled_amount
+    ):
+        """Create an instance of Exchange.OrderInfo struct
+
+        Keyword arguments:
+        order_status -- ZrxOrderStatus enum indicating order status
+        order_hash -- hexbyte of order hash
+        order_taker_assert_filled_amount -- integer order taker asset filled amount
+        """
+        self.order_status = ZrxOrderStatus(order_status)
+        self.order_hash = HexBytes(order_hash)
+        self.order_taker_asset_filled_amount = int(order_taker_asset_filled_amount)
+
+    def __str__(self):
+        return (
+            f"[{self.__name__}]({self.order_status}, {self.order_hash.hex()}"
+            f", filled_amount={self.order_taker_asset_filled_amount})")
+
+    __repr__ = __str__
 
 
 class ZeroExWeb3Client(Web3Client):
