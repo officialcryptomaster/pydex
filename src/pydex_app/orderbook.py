@@ -22,6 +22,14 @@ class Orderbook:
     def get_order_by_hash_if_exists(cls, order_hash):
         """Retrieves a specific order by orderHash."""
         signed_order_if_exists = SignedOrder.query.get_or_404(order_hash)
+        print(signed_order_if_exists.order_status)
+        if signed_order_if_exists.order_status < 3:
+            raise Exception(f"order {order_hash} is INVALID. OrderStatus: {signed_order_if_exists.order_status}")
+        if signed_order_if_exists.order_status > 3:
+            raise Exception(
+                f"order {order_hash} has either been filled, cancelled or has expired.\
+                OrderStatus: {signed_order_if_exists.order_status}"
+            )
         return to_api_order(signed_order_if_exists.to_json())
 
     @classmethod
@@ -39,13 +47,25 @@ class Orderbook:
         if asset_data_a and asset_data_b:
             asset_pairs = SignedOrder.query.with_entities(
                 SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
-            ).filter_by(maker_asset_data=asset_data_a, taker_asset_data=asset_data_b)
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == asset_data_a)
+                & (SignedOrder.taker_asset_data == asset_data_b)
+            )
         elif asset_data_a:
             asset_pairs = SignedOrder.query.with_entities(
-                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(maker_asset_data=asset_data_a)
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == asset_data_a)
+            )
         elif asset_data_b:
             asset_pairs = SignedOrder.query.with_entities(
-                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data).filter_by(taker_asset_data=asset_data_b)
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == asset_data_a)
+            )
         else:
             asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
         unique_asset_pairs = set(asset_pairs)
@@ -226,7 +246,7 @@ class Orderbook:
             fee_recipient_address=fee_recipient_address
         )
         filter_object = {k: v for k, v in pre_filter.items() if v is not None}
-        orders = SignedOrder.query.filter_by(**filter_object)
+        orders = SignedOrder.query.filter(SignedOrder.order_status > 0).filter_by(**filter_object)
         api_orders = [to_api_order(order.to_json()) for order in orders]
         return paginate(api_orders, page=page, per_page=per_page), len(api_orders)
 
