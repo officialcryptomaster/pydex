@@ -5,6 +5,7 @@ author: officialcryptomaster@gmail.com
 """
 import time
 from datetime import datetime
+from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
 
 
 def now_epoch_secs():
@@ -41,7 +42,12 @@ def try_(func, *args, **kwargs):
         return _default_val
 
 
-def paginate(arr, page=1, per_page=20):
+def normalize_query_param(query_param):
+    """Normalize query parameter to lower case"""
+    return query_param.lower() if query_param else None
+
+
+def paginate(arr, page=DEFAULT_PAGE, per_page=DEFAULT_PER_PAGE):
     """Given an ordered iterable like a list and a page number, return
     a slice of the iterable which whose elements make up the page.
 
@@ -53,3 +59,8 @@ def paginate(arr, page=1, per_page=20):
     """
     page_idx = page - 1
     return arr[page_idx: page_idx+per_page]
+
+
+def to_api_order(signed_order_json):
+    """Given a signed order json, make compatible with 0x API Order Schema"""
+    return {"metaData": {}, "order": signed_order_json}
