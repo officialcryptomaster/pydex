@@ -21,7 +21,7 @@ def test_post_order(
     )
     res = test_client.post(
         pydex_client.post_order_url,
-        json=order.to_json(),
+        json=order.to_json(test_order_status=3),
     )
     assert res.status_code == 200
     # Retrieve order via get order endpoint
