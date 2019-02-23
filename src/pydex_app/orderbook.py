@@ -3,30 +3,133 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
+from zero_ex.dev_utils import abi_utils
+from zero_ex.order_utils import asset_data_utils as adu
+from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE
+from pydex_app.constants import MAX_INT_STR, SELECTOR_LENGTH, ZERO_STR
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
-from utils.miscutils import paginate
+from utils.miscutils import normalize_query_param, paginate, to_api_order
 
 
 class Orderbook:
     """Abstraction for orderbook of signed orders"""
 
+    def __init__(self):
+        pass
+
     @classmethod
-    def add_order(cls, order):
+    def get_order_by_hash_if_exists(cls, order_hash):
+        """Retrieves a specific order by orderHash.
+
+        Keyword arguments:
+        order_hash -- string hash of the signed order to be queried
+        """
+        signed_order_if_exists = SignedOrder.query.get_or_404(normalize_query_param(order_hash))
+        print(signed_order_if_exists.order_status)
+        if signed_order_if_exists.order_status < 3:
+            raise Exception(f"order {order_hash} is INVALID. OrderStatus: {signed_order_if_exists.order_status}")
+        if signed_order_if_exists.order_status > 3:
+            raise Exception(
+                f"order {order_hash} has either been filled, cancelled or has expired.\
+                OrderStatus: {signed_order_if_exists.order_status}"
+            )
+        return to_api_order(signed_order_if_exists.to_json())
+
+    @classmethod
+    def get_asset_pairs(
+        cls,
+        asset_data_a=None,
+        asset_data_b=None,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Retrieves a list of available asset pairs and the information
+        required to trade them
+
+        Keyword arguments:
+        asset_data_a -- string asset_data for maker side (i.e. `maker_asset_data`)
+        asset_data_b -- string asset_data for taker side (i.e. `taker_asset_data`)
+        """
+        asset_pairs = []
+        normalized_asset_a = normalize_query_param(asset_data_a)
+        normalized_asset_b = normalize_query_param(asset_data_b)
+        if asset_data_a and asset_data_b:
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == normalized_asset_a)
+                & (SignedOrder.taker_asset_data == normalized_asset_b)
+            )
+        elif asset_data_a:
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == normalized_asset_a)
+            )
+        elif asset_data_b:
+            asset_pairs = SignedOrder.query.with_entities(
+                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
+            ).filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data == normalized_asset_b)
+            )
+        else:
+            asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
+        unique_asset_pairs = set(asset_pairs)
+
+        def erc721_asset_data_to_asset(asset_data):
+            return {
+                "minAmount": ZERO_STR,
+                "maxAmount": "1",
+                "precision": 0,
+                "assetData": asset_data
+            }
+
+        def erc20_asset_data_to_asset(asset_data):
+            return {
+                "minAmount": ZERO_STR,
+                "maxAmount": MAX_INT_STR,
+                "precision": DEFAULT_ERC20_DECIMALS,
+                "assetData": asset_data
+            }
+
+        def asset_data_to_asset(asset_data):
+            asset_proxy_id: str = asset_data[:SELECTOR_LENGTH]
+            if asset_proxy_id == abi_utils.method_id("ERC20Token", ["address"]):
+                return erc20_asset_data_to_asset(asset_data)
+            if asset_proxy_id == abi_utils.method_id("ERC721Token", ["address"]):
+                return erc721_asset_data_to_asset(asset_data)
+            raise ValueError(f"Invalid asset data {str(asset_data)}")
+
+        def get_asset_pair_data(asset_pair):
+            return {
+                "assetDataA": asset_data_to_asset(asset_pair[0]),
+                "assetDataB": asset_data_to_asset(asset_pair[1])
+            }
+
+        asset_pairs_data = [get_asset_pair_data(asset_pair) for asset_pair in list(unique_asset_pairs)]
+        return paginate(asset_pairs_data, page=page, per_page=per_page), len(asset_pairs_data)
+
+    @classmethod
+    def add_order(cls, json_order):
         """Add order to database without any validity checks.
         Note: OrderStatusHandler will check the status and activate orders
         by adding them to handler"""
+        order = SignedOrder.from_json(json_order, check_validity=True)
         db.session.add(order)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
 
     @classmethod
-    def get_bids(
+    def get_bids(  # pylint: disable=too-many-locals
         cls,
         base_asset,
         quote_asset,
         full_asset_set=None,
-        page=1,
-        per_page=10
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
     ):
         """Get all bids to buy a `base_asset` by providing the `quote_asset`
         (i.e. bid is someone trying to buy the `base_asset` (`taker_asset`)
@@ -40,9 +143,11 @@ class Orderbook:
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
         """
+        normalized_quote_asset = normalize_query_param(quote_asset)
+        normalized_base_asset = normalize_query_param(base_asset)
         bids = SignedOrder.query.filter(
-            (SignedOrder.maker_asset_data == quote_asset)
-            & (SignedOrder.taker_asset_data == base_asset)
+            (SignedOrder.maker_asset_data == normalized_quote_asset)
+            & (SignedOrder.taker_asset_data == normalized_base_asset)
             & (SignedOrder.order_status > 0)
         )
         bids_count = bids.count()
@@ -53,13 +158,15 @@ class Orderbook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=quote_asset,
-                taker_asset=base_asset,
+                maker_asset=normalized_quote_asset,
+                taker_asset=normalized_base_asset,
                 full_asset_set=full_asset_set
             )
+            normalized_eq_maker_asset = normalize_query_param(eq_maker_asset)
+            normalized_eq_taker_asset = normalize_query_param(eq_taker_asset)
             eq_asks = SignedOrder.query.filter(
-                (SignedOrder.maker_asset_data == eq_maker_asset)
-                & (SignedOrder.taker_asset_data == eq_taker_asset)
+                (SignedOrder.maker_asset_data == normalized_eq_maker_asset)
+                & (SignedOrder.taker_asset_data == normalized_eq_taker_asset)
                 & (SignedOrder.order_status > 0)
             )
             bids_count += eq_asks.count()
@@ -69,13 +176,13 @@ class Orderbook:
         return paginate(bids, page=page, per_page=per_page), bids_count
 
     @classmethod
-    def get_asks(
+    def get_asks(  # pylint: disable=too-many-locals
         cls,
         base_asset,
         quote_asset,
         full_asset_set=None,
-        page=1,
-        per_page=10
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
     ):
         """Get all asks to sell a `base_asset` against a `quote_asset`
         (i.e. ask is someone trying to sell the `base_asset` (`maker_asset`)
@@ -89,9 +196,11 @@ class Orderbook:
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
         """
+        normalized_quote_asset = normalize_query_param(quote_asset)
+        normalized_base_asset = normalize_query_param(base_asset)
         asks = SignedOrder.query.filter(
-            (SignedOrder.maker_asset_data == base_asset)
-            & (SignedOrder.taker_asset_data == quote_asset)
+            (SignedOrder.maker_asset_data == normalized_base_asset)
+            & (SignedOrder.taker_asset_data == normalized_quote_asset)
             & (SignedOrder.order_status > 0)
         )
         asks_count = asks.count()
@@ -102,13 +211,15 @@ class Orderbook:
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=base_asset,
-                taker_asset=quote_asset,
+                maker_asset=normalized_base_asset,
+                taker_asset=normalized_quote_asset,
                 full_asset_set=full_asset_set
             )
+            normalized_eq_maker_asset = normalize_query_param(eq_maker_asset)
+            normalized_eq_taker_asset = normalize_query_param(eq_taker_asset)
             eq_bids = SignedOrder.query.filter(
-                (SignedOrder.maker_asset_data == eq_maker_asset)
-                & (SignedOrder.taker_asset_data == eq_taker_asset)
+                (SignedOrder.maker_asset_data == normalized_eq_maker_asset)
+                & (SignedOrder.taker_asset_data == normalized_eq_taker_asset)
                 & (SignedOrder.order_status > 0)
             )
             asks_count += eq_bids.count()
@@ -116,6 +227,73 @@ class Orderbook:
             asks.extend([eq_bid.set_bid_as_sort_price() for eq_bid in eq_bids])
             asks = sorted(asks, key=lambda o: o.sort_price, reverse=True)
         return paginate(asks, page=page, per_page=per_page), asks_count
+
+    @classmethod
+    def get_orders(  # pylint: disable=too-many-locals
+        cls,
+        maker_asset_proxy_id=None,
+        taker_asset_proxy_id=None,
+        maker_asset_address=None,
+        taker_asset_address=None,
+        exchange_address=None,
+        sender_address=None,
+        maker_asset_data=None,
+        taker_asset_data=None,
+        maker_address=None,
+        taker_address=None,
+        fee_recipient_address=None,
+        page=DEFAULT_PAGE,
+        per_page=DEFAULT_PER_PAGE
+    ):
+        """Retrieves a list of orders given query parameters.
+
+        Keyword arguments:
+        maker_asset_proxy_id -- string proxy id for the maker asset
+        taker_asset_proxy_id -- string proxy id for the taker asset
+        maker_asset_address -- string address for maker asset
+        taker_asset_address -- string address for taker asset
+        exchange_address -- string address for the 0x exchange contract
+        sender_address -- string address for the party reponsible to broadcast the order
+        maker_asset_data -- string asset_data for maker side (i.e. `maker_asset_data`)
+        taker_asset_data -- string asset_data for taker side (i.e. `taker_asset_data`)
+        maker_address -- string address for the maker
+        maker_address -- string address for the taker
+        fee_recipient_address -- string address for the fee recipient
+        """
+        pre_filter = dict(
+            exchange_address=normalize_query_param(exchange_address),
+            sender_address=normalize_query_param(sender_address),
+            maker_asset_data=normalize_query_param(maker_asset_data)
+            or (adu.encode_erc20_asset_data(maker_asset_address) if maker_asset_address else None),
+            taker_asset_data=normalize_query_param(taker_asset_data)
+            or (adu.encode_erc20_asset_data(taker_asset_address) if taker_asset_address else None),
+            maker_address=normalize_query_param(maker_address),
+            taker_address=normalize_query_param(taker_address),
+            fee_recipient_address=normalize_query_param(fee_recipient_address)
+        )
+        filter_object = {k: v for k, v in pre_filter.items() if v is not None}
+        normalized_maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
+        normalized_taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
+        if maker_asset_proxy_id and taker_asset_proxy_id:
+            orders = SignedOrder.query.filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
+                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
+            ).filter_by(**filter_object)
+        elif maker_asset_proxy_id:
+            orders = SignedOrder.query.filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
+            ).filter_by(**filter_object)
+        elif taker_asset_proxy_id:
+            orders = SignedOrder.query.filter(
+                (SignedOrder.order_status > 0)
+                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
+            ).filter_by(**filter_object)
+        else:
+            orders = SignedOrder.query.filter(SignedOrder.order_status > 0).filter_by(**filter_object)
+        api_orders = [to_api_order(order.to_json()) for order in orders]
+        return paginate(api_orders, page=page, per_page=per_page), len(api_orders)
 
     @classmethod
     def get_full_set_equivalent(cls, maker_asset, taker_asset, full_asset_set):
