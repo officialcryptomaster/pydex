@@ -3,13 +3,67 @@ Tests for SRA interface
 author: officialcryptomaster@gmail.com
 """
 from zero_ex.json_schemas import assert_valid
-from pydex_client.client import PyDexClient
+from pydex_app.constants import DEFAULT_ERC20_DECIMALS, MAX_INT_STR, ZERO_STR
 from pydex_app.db_models import SignedOrder
 
-SIDE_BUY = "BUY"
-SIDE_SELL = "SELL"
-ASSET_LONG = "LONG"
-ASSET_SHORT = "SHORT"
+
+def test_post_order(
+    test_client, pydex_client, make_veth_signed_order
+):
+    """Make sure posting order returns success and order exists
+    in database."""
+    order = make_veth_signed_order(
+        asset_type="LONG",
+        qty=0.0001,
+        price=0.5,
+        side="BUY",
+    )
+    res = test_client.post(
+        pydex_client.post_order_url,
+        json=order.to_json(test_order_status=3),
+    )
+    assert res.status_code == 200
+    # Retrieve order via get order endpoint
+    res = test_client.get(
+        "{}{}".format(pydex_client.get_order_url, order.hash)
+    )
+    assert res.status_code == 200
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrderSchema")
+    assert res["order"] == order.to_json()
+
+
+def test_query_orders(
+    test_client, pydex_client, asset_infos
+):
+    """Test whether the app can return a valid list of orders,
+    filtered by query params
+    """
+    orders_params = pydex_client.make_orders_query(
+        maker_asset_data=asset_infos.VETH_ASSET_DATA,
+        taker_asset_data=asset_infos.LONG_ASSET_DATA
+    )
+    res = test_client.get(
+        pydex_client.get_orders_url,
+        query_string=orders_params
+    )
+    assert res.status_code == 200
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    assert res["records"][0]["order"]["makerAssetData"] == asset_infos.VETH_ASSET_DATA
+    assert res["records"][0]["order"]["takerAssetData"] == asset_infos.LONG_ASSET_DATA
+    expected_maker_asset_proxy_id = "0xf47261b0"
+    orders_params = pydex_client.make_orders_query(
+        maker_asset_proxy_id=expected_maker_asset_proxy_id,
+    )
+    res = test_client.get(
+        pydex_client.get_orders_url,
+        query_string=orders_params
+    )
+    assert res.status_code == 200
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    assert res["records"][0]["order"]["makerAssetData"][:10] == expected_maker_asset_proxy_id
 
 
 def test_query_orderbook(
@@ -21,8 +75,9 @@ def test_query_orderbook(
         quote_asset_data=asset_infos.LONG_ASSET_DATA,
     )
     res = test_client.get(
-        PyDexClient.orderbook_url,
-        query_string=orderbook_params)
+        pydex_client.orderbook_url,
+        query_string=orderbook_params
+    )
     assert res.status_code == 200
     res = res.get_json()
     assert_valid(res, "/relayerApiOrderbookResponseSchema")
@@ -32,8 +87,62 @@ def test_query_orderbook(
     # assert res == expected_res
 
 
+def test_query_asset_pairs(
+    test_client, pydex_client, asset_infos
+):
+    """Test whether the app can return valid asset pairs"""
+    expected_res = {
+        'total': 1,
+        'page': 1,
+        'perPage': 20,
+        'records': [
+            {
+                'assetDataA': {
+                    'minAmount': ZERO_STR,
+                    'maxAmount': MAX_INT_STR,
+                    'precision': DEFAULT_ERC20_DECIMALS,
+                    'assetData': asset_infos.VETH_ASSET_DATA
+                },
+                'assetDataB': {
+                    'minAmount': ZERO_STR,
+                    'maxAmount': MAX_INT_STR,
+                    'precision': DEFAULT_ERC20_DECIMALS,
+                    'assetData': asset_infos.LONG_ASSET_DATA
+                }
+            }
+        ]
+    }
+    asset_pairs_params = pydex_client.make_asset_pairs_query(
+        asset_data_a=asset_infos.VETH_ASSET_DATA,
+        asset_data_b=asset_infos.LONG_ASSET_DATA,
+    )
+    res = test_client.get(
+        pydex_client.asset_pairs_url,
+        query_string=asset_pairs_params
+    )
+    assert res.status_code == 200
+    assert res.get_json() == expected_res
+    asset_pairs_params = pydex_client.make_asset_pairs_query()
+    res = test_client.get(
+        pydex_client.asset_pairs_url,
+        query_string=asset_pairs_params
+    )
+    assert res.status_code == 200
+    assert res.get_json() == expected_res
+
+
+def test_query_fee_recipients(
+    test_client, pydex_client
+):
+    """Test if app can return valid fee recipient(s)"""
+    res = test_client.get(
+        pydex_client.fee_recipients_url
+    )
+    assert res.status_code == 200
+
+
 def test_to_and_from_json_signed_order(
-    pydex_client,
+    pydex_client
 ):
     """Make sure creating a signed order from json does not change when it is turned back to json"""
     expected_order_json = {
@@ -66,75 +175,3 @@ def test_to_and_from_json_signed_order(
     # sign the order
     order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
     assert order.to_json(include_hash=True) == expected_order_json
-
-
-def test_post_order(
-    test_client, pydex_client, make_veth_signed_order
-):
-    """Make sure posting order returns success and order exists
-    in database."""
-    order = make_veth_signed_order(
-        asset_type=ASSET_LONG,
-        qty=0.0001,
-        price=0.5,
-        side=SIDE_BUY,
-    )
-    res = test_client.post(
-        pydex_client.post_order_url,
-        json=order.to_json(),
-    )
-    assert res.status_code == 200
-    assert SignedOrder.query.filter_by(
-        hash=order.hash
-    ).count() == 1
-
-    order_short = make_veth_signed_order(
-        asset_type=ASSET_SHORT,
-        qty=0.0002,
-        price=0.9,
-        side=SIDE_BUY,
-    )
-    res = test_client.post(
-        pydex_client.post_order_url,
-        json=order_short.to_json(),
-    )
-    assert res.status_code == 200
-    assert SignedOrder.query.filter_by(
-        hash=order_short.hash
-    ).count() == 1
-
-    assert SignedOrder.query.count() == 2
-
-    order_sell = make_veth_signed_order(
-        asset_type=ASSET_LONG,
-        qty=0.0001,
-        price=0.5,
-        side=SIDE_SELL,
-    )
-    res = test_client.post(
-        pydex_client.post_order_url,
-        json=order_sell.to_json(),
-    )
-    assert res.status_code == 200
-    assert SignedOrder.query.filter_by(
-        hash=order_sell.hash
-    ).count() == 1
-
-    assert SignedOrder.query.count() == 3
-
-    order_short_sell = make_veth_signed_order(
-        asset_type=ASSET_SHORT,
-        qty=0.0001,
-        price=0.5,
-        side=SIDE_SELL,
-    )
-    res = test_client.post(
-        pydex_client.post_order_url,
-        json=order_short_sell.to_json(),
-    )
-    assert res.status_code == 200
-    assert SignedOrder.query.filter_by(
-        hash=order_short_sell.hash
-    ).count() == 1
-
-    assert SignedOrder.query.count() == 4
