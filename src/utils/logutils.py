@@ -33,8 +33,9 @@ def setup_logger(
     logger = logging.getLogger(logger_name)
 
     formatter_str = (
-        "%(asctime)s.%(msecs)03d [%(levelname)s] %(filename)s:%(lineno)d "
-        "%(name)s.%(funcName)s(): %(message)s")
+        "%(asctime)s.%(msecs)03d %(thread)d [%(levelname)s]"
+        " %(filename)s:%(lineno)d"
+        " %(name)s.%(funcName)s(): %(message)s")
     time_format_str = "%Y-%m-%d %H:%M:%S"
 
     if file_name:

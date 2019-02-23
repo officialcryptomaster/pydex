@@ -15,7 +15,6 @@ author: officialcryptomaster@gmail.com
 """
 
 import json
-import logging
 
 from threading import Thread
 
@@ -23,7 +22,7 @@ import websocket
 
 from utils.logutils import setup_logger
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = setup_logger(__name__)
 
 
 class OrderWatcherClient:
@@ -37,52 +36,52 @@ class OrderWatcherClient:
 
     def __init__(
         self,
-        url="ws://127.0.0.1:8080",
+        server_url="ws://127.0.0.1:8080",
         on_open=None,
-        on_msg=None,
+        on_update=None,
         on_error=None,
         on_close=None,
         enable_trace=False,
     ):
         """
         Keyword arguments:
-        url -- string url and port where order-watcher-server is running the json
-            RPC service
-        on_open -- function hook for when the web socket connection is first
+        server_url -- string url and port where order-watcher-server is running the
+            json RPC service
+        on_open -- function with no args for when the web socket connection is first
             established
-        on_msg -- function hook for when updates are sent from the server
-        on_error -- function hook for an error occurs in the web socket
-        on_close -- function hook for when web socket is closed down
+        on_update -- function with `message` arg for when updates are sent from the server
+        on_error -- function with `error` arg for an error occurs in the web socket
+        on_close -- function with no arg for when web socket is closed down
         enable_trace -- boolean indicating whether the web socket should have
             verbose debug information (default: False)
         """
-        self.url = url
+        self.server_url = server_url
         self.on_open = on_open
-        self.on_msg = on_msg
+        self.on_update = on_update
         self.on_error = on_error
         self.on_close = on_close
         self.enable_trace = enable_trace
         self.websoc = websocket.WebSocketApp(
-            url=self.url,
-            on_open=on_open,
-            on_message=on_msg,
-            on_error=on_error,
-            on_close=on_close
+            url=self.server_url,
+            on_open=lambda ws: self.on_open_router(),
+            on_message=lambda ws, message: self.on_update_router(message),
+            on_error=lambda ws, error: self.on_error_router(error),
+            on_close=lambda ws: self.on_close_router(),
         )
         self._msg_id = 1
         self._th = None
 
     def run(self):
-        """Run an instance of the order-watcher-client in a separate thread
-        """
+        """Run an instance of the order-watcher-client in a separate thread"""
         if self._th:
             LOGGER.info("Already running...")
-            return
+            return self
         websocket.enableTrace(self.enable_trace)
         self._th = Thread(target=self.websoc.run_forever)
         LOGGER.debug(
             "Starting web socket client in thread %s...", self._th)
         self._th.start()
+        return self
 
     def stop(self):
         """Force the websocket to close and the background thread to stop"""
@@ -97,46 +96,29 @@ class OrderWatcherClient:
         if self._th:
             self._th.join()
 
-    def on_open_default(self, *args, **kwargs):  # pylint: disable=unused-argument
-        """Default on_open function just gets number of order being watched by
-        the server.
-        """
-        LOGGER.info("### open ###")
-        stats = self.get_stats()
-        LOGGER.info("Got stats: %s", stats.get("result"))
-
-    def _rpc(self, method, params=None, on_msg=None, on_error=None):
-        """Remote Procedure Call handler
-        """
-        new_id = self._msg_id + 1
+    def _rpc(self, method, params=None):
+        """Remote Procedure Call handler"""
         msg_json = {
-            "id": new_id,
+            "id": self._msg_id,
             "jsonrpc": "2.0",
             "method": method,
         }
         if params:
             msg_json["params"] = params
         LOGGER.debug("sending... %s", msg_json)
-        websoc = websocket.create_connection(self.url)
+        websoc = websocket.create_connection(self.server_url)
         websoc.send(json.dumps(msg_json))
-        self._msg_id = new_id + 1
+        self._msg_id += 1
         LOGGER.debug("receiving...")
         res = websoc.recv()
         LOGGER.debug("received %s", res)
-        on_msg = on_msg or self.on_msg
-        on_error = on_error or self.on_error
         if not isinstance(res, dict):
             try:
                 res = json.loads(res)
             except (json.decoder.JSONDecodeError, TypeError):
                 LOGGER.exception(
                     "Result of send was not valid json. original message was:\n{}\n")
-                if on_error:
-                    return on_error(res)
-                return None
-        if on_msg:
-            return on_msg(res)
-        return None
+        return res
 
     def get_stats(self):
         """Get number of orders being watched by the server"""
@@ -148,7 +130,7 @@ class OrderWatcherClient:
         Keyword arguments:
         signed_order -- dict of a signedOrder
         """
-        self._rpc(
+        return self._rpc(
             method="ADD_ORDER",
             params={"signedOrder": signed_order})
 
@@ -158,18 +140,69 @@ class OrderWatcherClient:
         Keyword arguments:
         order_hash -- string hex hash of signed order
         """
-        self._rpc(
+        return self._rpc(
             method="REMOVE_ORDER",
             params={"orderHash": order_hash})
 
+    def on_open_router(self):
+        """Logs an info message and routes it to self.on_open."""
+        LOGGER.info("### websocket@%s opened ###", self.server_url)
+        if self.on_open:
+            return self.on_open()
+        return None
+
+    def on_update_router(self, message):
+        """Logs an info message, converts to json and routes 'result' to self.on_message"""
+        LOGGER.info("got message: %s", message)
+        if self.on_update:
+            try:
+                message = json.loads(message)
+                message = message["result"]
+            except (json.decoder.JSONDecodeError, TypeError, KeyError):
+                LOGGER.exception(
+                    "Update message had invalid format. original message was:\n{}\n")
+                return message
+            try:
+                return self.on_update(message)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("on_update() failed to handle message=%s", message)
+        return message
+
+    def on_close_router(self):
+        """Default on_close logs the fact that web socket was closed."""
+        LOGGER.info("### websocket@%s closed ###", self.server_url)
+        if self.on_close:
+            return self.on_close()
+        return None
+
+    def on_error_router(self, error):
+        """Default on_error, just logs the error message."""
+        LOGGER.error("got error: %s", error)
+        if self.on_error:
+            try:
+                error = json.loads(error)
+                error = error["error"]
+            except (json.decoder.JSONDecodeError, TypeError, KeyError):
+                LOGGER.exception(
+                    "Error message had invalid format. original message was:\n{}\n")
+                return error
+            try:
+                return self.on_error(error)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("on_error() failed to handle error=%s", error)
+        return error
+
 
 if __name__ == "__main__":
+    import signal
 
-    LOGGER = setup_logger(__name__, file_name="order_watcher.log")
+    OWC = OrderWatcherClient()
 
-    order_watcher = OrderWatcherClient(  # pylint: disable=invalid-name
-        on_msg=LOGGER.info,
-        on_error=LOGGER.error,
-    )
-    order_watcher.run()
-    order_watcher.join()
+    def signal_handler(_signal, _frame):
+        """Handle Ctrl+C signal by telling OrderWatcherClient to stop running"""
+        LOGGER.warning("Ctrl+C detected... Will Stop!")
+        OWC.stop()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    OWC.run().join()

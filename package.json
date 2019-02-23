@@ -4,9 +4,9 @@
     "author": "cryptomaster",
     "license": "Apache-2.0",
     "scripts": {
-        "start-order-watcher" : "node node_modules/@0x/order-watcher/lib/src/server.js"
+        "start-order-watcher-server": "node node_modules/@0x/order-watcher/lib/src/server.js"
     },
     "dependencies": {
-        "@0x/order-watcher": "3.0.3"
-     }
+        "@0x/order-watcher": "3.0.4"
+    }
 }

@@ -1,0 +1,48 @@
+if [[ ! -d ./node_modules ]]; then
+    yarn install
+fi;
+
+# export NETWORK_ID=50 # Ganache
+# export JSON_RPC_URL="http://localhost:8545"
+# export NETWORK_ID=4 # Rinkeby
+export JSON_RPC_URL="https://rinkeby.infura.io"
+export IS_VERBOSE=true
+# export EVENT_POLLING_INTERVAL_MS=
+# export EXPIRATION_MARGIN_MS=
+# export CLEANUP_JOB_INTERVAL_MS=
+
+export ORDER_WATCHER_SERVER_LOG_FILE=./logs/order_watcher_server.log
+
+if [[ ! -d logs ]]; then
+    mkdir logs
+fi
+
+alias get-order-watcher-server-pid="ps -aef | grep -v grep | grep 'order-watcher/lib/src/server.js' | tr -s ' ' | cut -d ' ' -f 4" 
+export ORDER_WATCHER_PID=`get-order-watcher-server-pid`
+
+if [[ $ORDER_WATCHER_PID ]]; then
+    echo "order-watcher is already running at process-id $ORDER_WATCHER_PID"
+else
+    echo "########################################## starting order watcher server..." >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+    if [[ $NETWORK_ID ]]; then
+        echo "order-watcher-server will use NETWORK_ID=$NETWORK_ID" >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+    else
+        echo "WARNING: NETWORK_ID is not set will set it to 50 (Ganache)" >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+    fi;
+
+    if [[ $JSON_RPC_URL ]]; then
+        echo "order-watcher-server will use JSON_RPC_URL=$JSON_RPC_URL" >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+    else
+        if [[ $WEB3_RPC_URL ]]; then
+            export JSON_RPC_URL=$WEB3_RPC_URL
+            echo "WARNING: JSON_RPC_URL (the web3 provider) was set to WEB3_RPC_URL=${WEB3_RPC_URL}" >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+        else
+            echo "WARNING: JSON_RPC_URL (the web3 provider) is not set, will default to http://localhost:8545." >> $ORDER_WATCHER_SERVER_LOG_FILE | tee
+        fi
+    fi;
+
+    yarn start-order-watcher-server >> $ORDER_WATCHER_SERVER_LOG_FILE 2>&1 &
+    sleep 1
+    export ORDER_WATCHER_PID=`get-order-watcher-server-pid`
+    echo "order watcher successfully launched with proess-id $ORDER_WATCHER_PID" 
+fi

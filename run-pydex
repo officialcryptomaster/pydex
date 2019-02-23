@@ -1,5 +1,5 @@
 source setup
-source start-order-watcher
+source start-order-update-handler
 
 if [[ `lsof -t -i :3000` ]]; then 
     echo "dex server already running at port 3000"
