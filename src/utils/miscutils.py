@@ -42,6 +42,11 @@ def try_(func, *args, **kwargs):
         return _default_val
 
 
+def normalize_query_param(query_param):
+    """Normalize query parameter to lower case"""
+    return query_param.lower() if query_param else None
+
+
 def paginate(arr, page=DEFAULT_PAGE, per_page=DEFAULT_PER_PAGE):
     """Given an ordered iterable like a list and a page number, return
     a slice of the iterable which whose elements make up the page.
