@@ -1,12 +1,15 @@
 """
 Tests for SRA interface
-
 author: officialcryptomaster@gmail.com
 """
 from zero_ex.json_schemas import assert_valid
 from pydex_client.client import PyDexClient
 from pydex_app.db_models import SignedOrder
 
+SIDE_BUY = "BUY"
+SIDE_SELL = "SELL"
+ASSET_LONG = "LONG"
+ASSET_SHORT = "SHORT"
 
 def test_query_orderbook(
     test_client, pydex_client, asset_infos
@@ -70,10 +73,10 @@ def test_post_order(
     """Make sure posting order returns success and order exists
     in database."""
     order = make_veth_signed_order(
-        asset_type="LONG",
+        asset_type=ASSET_LONG,
         qty=0.0001,
         price=0.5,
-        side="BUY",
+        side=SIDE_BUY,
     )
     res = test_client.post(
         pydex_client.post_order_url,
@@ -83,3 +86,54 @@ def test_post_order(
     assert SignedOrder.query.filter_by(
         hash=order.hash
     ).count() == 1
+
+    order_short = make_veth_signed_order(
+        asset_type=ASSET_SHORT,
+        qty=0.0002,
+        price=0.9,
+        side=SIDE_BUY,
+    )
+    res = test_client.post(
+        pydex_client.post_order_url,
+        json=order_short.to_json(),
+    )
+    assert res.status_code == 200
+    assert SignedOrder.query.filter_by(
+        hash=order_short.hash
+    ).count() == 1
+
+    assert SignedOrder.query.count() == 2
+
+    order_sell = make_veth_signed_order(
+        asset_type=ASSET_LONG,
+        qty=0.0001,
+        price=0.5,
+        side=SIDE_SELL,
+    )
+    res = test_client.post(
+        pydex_client.post_order_url,
+        json=order_sell.to_json(),
+    )
+    assert res.status_code == 200
+    assert SignedOrder.query.filter_by(
+        hash=order_sell.hash
+    ).count() == 1
+
+    assert SignedOrder.query.count() == 3
+    
+    order_short_sell = make_veth_signed_order(
+        asset_type=ASSET_SHORT,
+        qty=0.0001,
+        price=0.5,
+        side=SIDE_SELL,
+    )
+    res = test_client.post(
+        pydex_client.post_order_url,
+        json=order_short_sell.to_json(),
+    )
+    assert res.status_code == 200
+    assert SignedOrder.query.filter_by(
+        hash=order_short_sell.hash
+    ).count() == 1
+
+    assert SignedOrder.query.count() == 4
