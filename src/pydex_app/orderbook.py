@@ -272,21 +272,23 @@ class Orderbook:
             fee_recipient_address=normalize_query_param(fee_recipient_address)
         )
         filter_object = {k: v for k, v in pre_filter.items() if v is not None}
+        normalized_maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
+        normalized_taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
         if maker_asset_proxy_id and taker_asset_proxy_id:
             orders = SignedOrder.query.filter(
                 (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data.startswith(normalize_query_param(maker_asset_proxy_id)))
-                & (SignedOrder.taker_asset_data.startswith(normalize_query_param(taker_asset_proxy_id)))
+                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
+                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
             ).filter_by(**filter_object)
         elif maker_asset_proxy_id:
             orders = SignedOrder.query.filter(
                 (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data.startswith(normalize_query_param(maker_asset_proxy_id)))
+                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
             ).filter_by(**filter_object)
         elif taker_asset_proxy_id:
             orders = SignedOrder.query.filter(
                 (SignedOrder.order_status > 0)
-                & (SignedOrder.taker_asset_data.startswith(normalize_query_param(taker_asset_proxy_id)))
+                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
             ).filter_by(**filter_object)
         else:
             orders = SignedOrder.query.filter(SignedOrder.order_status > 0).filter_by(**filter_object)
