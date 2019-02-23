@@ -53,6 +53,18 @@ def test_query_orders(
     assert_valid(res, "/relayerApiOrdersResponseSchema")
     assert res["records"][0]["order"]["makerAssetData"] == asset_infos.VETH_ASSET_DATA
     assert res["records"][0]["order"]["takerAssetData"] == asset_infos.LONG_ASSET_DATA
+    expected_maker_asset_proxy_id = "0xf47261b0"
+    orders_params = pydex_client.make_orders_query(
+        maker_asset_proxy_id=expected_maker_asset_proxy_id,
+    )
+    res = test_client.get(
+        pydex_client.get_orders_url,
+        query_string=orders_params
+    )
+    assert res.status_code == 200
+    res = res.get_json()
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    assert res["records"][0]["order"]["makerAssetData"][:10] == expected_maker_asset_proxy_id
 
 
 def test_query_orderbook(
