@@ -15,9 +15,6 @@ from utils.miscutils import normalize_query_param, paginate, to_api_order
 class Orderbook:
     """Abstraction for orderbook of signed orders"""
 
-    def __init__(self):
-        pass
-
     @classmethod
     def get_order_by_hash_if_exists(cls, order_hash):
         """Retrieves a specific order by orderHash.
@@ -26,7 +23,6 @@ class Orderbook:
         order_hash -- string hash of the signed order to be queried
         """
         signed_order_if_exists = SignedOrder.query.get_or_404(normalize_query_param(order_hash))
-        print(signed_order_if_exists.order_status)
         if signed_order_if_exists.order_status < 3:
             raise Exception(f"order {order_hash} is INVALID. OrderStatus: {signed_order_if_exists.order_status}")
         if signed_order_if_exists.order_status > 3:
@@ -74,7 +70,7 @@ class Orderbook:
                 SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
             ).filter(
                 (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data == normalized_asset_b)
+                & (SignedOrder.taker_asset_data == normalized_asset_b)
             )
         else:
             asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
