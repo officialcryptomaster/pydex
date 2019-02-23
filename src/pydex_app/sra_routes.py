@@ -9,7 +9,6 @@ from flask import request, render_template, Blueprint, current_app
 from flask_cors import cross_origin
 from zero_ex.contract_addresses import NetworkId
 from zero_ex.json_schemas import assert_valid
-from pydex_app.db_models import SignedOrder
 from pydex_app.orderbook import Orderbook
 from pydex_app.constants import NULL_ADDRESS
 
@@ -30,17 +29,77 @@ def get_asset_pairs():
     information required to trade them.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getAssetPairs
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ASSET PAIRS")
+    network_id = NetworkId(int(request.args.get("networkId"))).value
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], \
+        f"networkId={network_id} not supported"
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    asset_data_a = request.args.get("assetDataA")
+    asset_data_b = request.args.get("assetDataB")
+    asset_pairs, asset_pairs_count = Orderbook.get_asset_pairs(
+        asset_data_a=asset_data_a,
+        asset_data_b=asset_data_b,
+        page=page,
+        per_page=per_page
+    )
+    res = {
+        "total": asset_pairs_count,
+        "perPage": per_page,
+        "page": page,
+        "records": asset_pairs
+    }
+    assert_valid(res, "/relayerApiAssetDataPairsResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route("/v2/orders", methods=["GET"])
+@cross_origin()
 def get_orders():
     """GET Orders endpoint retrieves a list of orders given query parameters.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrders
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ORDERS")
+    network_id = NetworkId(int(request.args.get("networkId"))).value
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], \
+        f"networkId={network_id} not supported"
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    orders, orders_count = Orderbook.get_orders(
+        maker_asset_proxy_id=request.args.get("makerAssetProxyId"),
+        taker_asset_proxy_id=request.args.get("takerAssetProxyId"),
+        maker_asset_address=request.args.get("makerAssetAddress"),
+        taker_asset_address=request.args.get("takerAssetAddress"),
+        exchange_address=request.args.get("exchangeAddress"),
+        sender_address=request.args.get("takerAssetAddress"),
+        maker_asset_data=request.args.get("makerAssetData") or request.args.get(
+            "traderAssetData"),
+        taker_asset_data=request.args.get("takerAssetData") or request.args.get(
+            "traderAssetData"),
+        maker_address=request.args.get("makerAddress") or request.args.get("traderAddress"),
+        taker_address=request.args.get("takerAddress") or request.args.get("traderAddress"),
+        fee_recipient_address=request.args.get("feeRecipient"),
+        page=page,
+        per_page=per_page,
+    )
+    res = {
+        "total": orders_count,
+        "perPage": per_page,
+        "page": page,
+        "records": orders
+    }
+    assert_valid(res, "/relayerApiOrdersResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/orderbook', methods=["GET"])
@@ -128,13 +187,30 @@ def post_order_config():
 
 
 @sra.route('/v2/fee_recipients', methods=["GET"])
+@cross_origin()
 def get_post_recipients():
     """GET FeeRecepients endpoint retrieves a collection of all fee recipient
     addresses for a relayer.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/v2/fee_recipients
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING FEE RECIPIENTS")
+    page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
+    per_page = int(request.args.get(
+        "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
+    normalized_fee_recipient = current_app.config["PYDEX_ZRX_FEE_RECIPIENT"].lower()
+    fee_recipients = [normalized_fee_recipient]
+    res = {
+        "total": len(fee_recipients),
+        "perPage": per_page,
+        "page": page,
+        "records": fee_recipients
+    }
+    assert_valid(res, "/relayerApiFeeRecipientsResponseSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @sra.route('/v2/order', methods=["POST"])
@@ -144,11 +220,11 @@ def post_order():
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/postOrder
     """
     current_app.logger.info("############ POSTING ORDER")
+    network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     current_app.logger.info(request.json)
     assert_valid(request.json, "/signedOrderSchema")
-    order = SignedOrder.from_json(request.json, check_validity=True)
-    Orderbook.add_order(order=order)
-
+    Orderbook.add_order(json_order=request.json)
     return current_app.response_class(
         response={'success': True},
         status=200,
@@ -156,10 +232,20 @@ def post_order():
     )
 
 
-@sra.route('/v2/order/', methods=["GET"])
-def get_order_by_hash():
+@sra.route('/v2/order/<order_hash>', methods=["GET"])
+@cross_origin()
+def get_order_by_hash(order_hash):
     """GET Order endpoint retrieves the order by order hash.
     http://sra-spec.s3-website-us-east-1.amazonaws.com/#operation/getOrder
     """
-    current_app.logger.error("not implemented")
-    raise NotImplementedError()
+    current_app.logger.info("############ GETTING ORDER BY HASH")
+    assert_valid(order_hash, "/orderHashSchema")
+    network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
+    assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
+    res = Orderbook.get_order_by_hash_if_exists(order_hash=order_hash)
+    assert_valid(res, "/relayerApiOrderSchema")
+    return current_app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
