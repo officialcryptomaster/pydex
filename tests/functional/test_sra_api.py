@@ -11,6 +11,7 @@ SIDE_SELL = "SELL"
 ASSET_LONG = "LONG"
 ASSET_SHORT = "SHORT"
 
+
 def test_query_orderbook(
     test_client, pydex_client, asset_infos
 ):
@@ -120,7 +121,7 @@ def test_post_order(
     ).count() == 1
 
     assert SignedOrder.query.count() == 3
-    
+
     order_short_sell = make_veth_signed_order(
         asset_type=ASSET_SHORT,
         qty=0.0001,
