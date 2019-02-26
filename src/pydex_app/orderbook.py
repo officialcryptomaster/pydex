@@ -3,13 +3,13 @@ Orderbook is the abstraction of an orderbook of signed orders used in pyDEX
 
 author: officialcryptomaster@gmail.com
 """
-from zero_ex.dev_utils import abi_utils
 from zero_ex.order_utils import asset_data_utils as adu
 from pydex_app.constants import DEFAULT_ERC20_DECIMALS, DEFAULT_PAGE, DEFAULT_PER_PAGE
 from pydex_app.constants import MAX_INT_STR, SELECTOR_LENGTH, ZERO_STR
 from pydex_app.database import PYDEX_DB as db
 from pydex_app.db_models import SignedOrder
 from utils.miscutils import normalize_query_param, paginate, to_api_order
+from utils.zeroexutils import ERC20_PROXY_ID, ERC721_PROXY_ID
 
 
 class Orderbook:
@@ -78,9 +78,9 @@ class Orderbook:
 
         def asset_data_to_asset(asset_data):
             asset_proxy_id: str = asset_data[:SELECTOR_LENGTH]
-            if asset_proxy_id == abi_utils.method_id("ERC20Token", ["address"]):
+            if asset_proxy_id == ERC20_PROXY_ID:
                 return erc20_asset_data_to_asset(asset_data)
-            if asset_proxy_id == abi_utils.method_id("ERC721Token", ["address"]):
+            if asset_proxy_id == ERC721_PROXY_ID:
                 return erc721_asset_data_to_asset(asset_data)
             raise ValueError(f"Invalid asset data {str(asset_data)}")
 

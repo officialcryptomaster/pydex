@@ -5,6 +5,7 @@ author: officialcryptomaster@gmail.com
 from zero_ex.json_schemas import assert_valid
 from pydex_app.constants import DEFAULT_ERC20_DECIMALS, MAX_INT_STR, ZERO_STR
 from pydex_app.db_models import SignedOrder
+from utils.zeroexutils import ERC20_PROXY_ID
 
 
 def test_post_order(
@@ -53,7 +54,7 @@ def test_query_orders(
     assert_valid(res, "/relayerApiOrdersResponseSchema")
     assert res["records"][0]["order"]["makerAssetData"] == asset_infos.VETH_ASSET_DATA
     assert res["records"][0]["order"]["takerAssetData"] == asset_infos.LONG_ASSET_DATA
-    expected_maker_asset_proxy_id = "0xf47261b0"
+    expected_maker_asset_proxy_id = ERC20_PROXY_ID
     orders_params = pydex_client.make_orders_query(
         maker_asset_proxy_id=expected_maker_asset_proxy_id,
         include_maybe_fillables=True

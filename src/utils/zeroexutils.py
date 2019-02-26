@@ -11,6 +11,8 @@ from zero_ex.contract_addresses import NetworkId, NETWORK_TO_ADDRESSES
 from utils.web3utils import Web3Client
 
 EIP191_HEADER = b"\x19\x01"
+ERC20_PROXY_ID = '0xf47261b0'
+ERC721_PROXY_ID = '0x02571792'
 
 
 EIP712_DOMAIN_SEPARATOR_SCHEMA_HASH = keccak(
