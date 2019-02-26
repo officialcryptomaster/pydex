@@ -66,8 +66,8 @@ class PyDexClient(ZeroExWeb3Client):
         """Get a dict for querying the orderbook for relevant asset pairs
 
         Keyword arguments:
-        asset_data_a -- hexstr value for the first asset in the pair
-        asset_data_b -- hexstr value for the second asset in the pair
+        asset_data_a -- hexstr value for the first asset in the pair (default: None)
+        asset_data_b -- hexstr value for the second asset in the pair (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
         """
@@ -101,19 +101,19 @@ class PyDexClient(ZeroExWeb3Client):
         """Get a dict for querying the orderbook for relevant asset pairs
 
         Keyword arguments:
-        maker_asset_proxy_id -- hexstr proxy id for the maker asset
-        taker_asset_proxy_id -- hexstr proxy id for the taker asset
-        maker_asset_address -- hexstr address for maker asset
-        taker_asset_address -- hexstr address for taker asset
-        exchange_address -- hexstr address for the 0x exchange contract
-        sender_address -- hexstr address for the party reponsible to broadcast the order
-        maker_asset_data -- hexstr asset_data for maker side (i.e. `maker_asset_data`)
-        taker_asset_data -- hexstr asset_data for taker side (i.e. `taker_asset_data`)
-        trader_asset_data -- hexstr asset_data for either maker side or taker side
-        maker_address -- hexstr address for the maker
-        maker_address -- hexstr address for the taker
-        trader_address -- hexstr address for either maker or taker
-        fee_recipient_address -- hexstr address for the fee recipient
+        maker_asset_proxy_id -- hexstr proxy id for the maker asset (default: None)
+        taker_asset_proxy_id -- hexstr proxy id for the taker asset (default: None)
+        maker_asset_address -- hexstr address for maker asset (default: None)
+        taker_asset_address -- hexstr address for taker asset (default: None)
+        exchange_address -- hexstr address for the 0x exchange contract (default: None)
+        sender_address -- hexstr address for the party reponsible to broadcast the order (default: None)
+        maker_asset_data -- hexstr asset_data for maker side (default: None)
+        taker_asset_data -- hexstr asset_data for taker side (default: None)
+        trader_asset_data -- hexstr asset_data for either maker side or taker side (default: None)
+        maker_address -- hexstr address for the maker (default: None)
+        maker_address -- hexstr address for the taker (default: None)
+        trader_address -- hexstr address for either maker or taker (default: None)
+        fee_recipient_address -- hexstr address for the fee recipient (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
         """
