@@ -53,8 +53,8 @@ PYTHONPATH=./src ./pydex_env/bin/pytest
 
 2. Make sure `pylint` and `flake8` do not show any issues by running:
 ```
-./pydex_env/bin/pylint src
-./pydex_env/bin/flake8 src
+PYTHONPATH=./src ./pydex_env/bin/pylint src tests
+PYTHONPATH=./src ./pydex_env/bin/flake8 src tests
 ```
 
 Hint: you can greatly reduce linting problems by making use of `autopep8` which is installed as part of the dev requirements and is configured to run every time you save a file in the visual studio settings provided with this project (`.vscode/settings.json`)
