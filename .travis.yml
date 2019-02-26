@@ -7,3 +7,5 @@ install:
 # command to run tests
 script:
   - pytest
+  - flake8 src tests
+  - pylint src tests
