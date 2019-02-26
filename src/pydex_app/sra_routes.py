@@ -38,11 +38,13 @@ def get_asset_pairs():
         "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
     asset_data_a = request.args.get("assetDataA")
     asset_data_b = request.args.get("assetDataB")
+    include_maybe_fillables = bool(request.args.get("include_maybe_fillables"))
     asset_pairs, asset_pairs_count = Orderbook.get_asset_pairs(
         asset_data_a=asset_data_a,
         asset_data_b=asset_data_b,
         page=page,
-        per_page=per_page
+        per_page=per_page,
+        include_maybe_fillables=include_maybe_fillables
     )
     res = {
         "total": asset_pairs_count,
@@ -87,6 +89,7 @@ def get_orders():
         fee_recipient_address=request.args.get("feeRecipient"),
         page=page,
         per_page=per_page,
+        include_maybe_fillables=bool(request.args.get("include_maybe_fillables"))
     )
     res = {
         "total": orders_count,
@@ -125,13 +128,15 @@ def get_order_book():
         quote_asset=quote_asset,
         full_asset_set=full_asset_set,
         page=page,
-        per_page=per_page)
+        per_page=per_page,
+    )
     asks, tot_ask_count = Orderbook.get_asks(
         base_asset=base_asset,
         quote_asset=quote_asset,
         full_asset_set=full_asset_set,
         page=page,
-        per_page=per_page)
+        per_page=per_page,
+    )
     res = {
         "bids": {
             "total": tot_bid_count,
@@ -224,7 +229,7 @@ def post_order():
     assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
     current_app.logger.info(request.json)
     assert_valid(request.json, "/signedOrderSchema")
-    Orderbook.add_order(json_order=request.json)
+    Orderbook.add_order(order_json=request.json)
     return current_app.response_class(
         response={'success': True},
         status=200,
@@ -242,7 +247,7 @@ def get_order_by_hash(order_hash):
     assert_valid(order_hash, "/orderHashSchema")
     network_id = request.args.get("networkId", current_app.config["PYDEX_NETWORK_ID"])
     assert network_id == current_app.config["PYDEX_NETWORK_ID"], f"networkId={network_id} not supported"
-    res = Orderbook.get_order_by_hash_if_exists(order_hash=order_hash)
+    res = Orderbook.get_order_by_hash(order_hash=order_hash)
     assert_valid(res, "/relayerApiOrderSchema")
     return current_app.response_class(
         response=json.dumps(res),

@@ -103,8 +103,6 @@ class SignedOrder(db.Model):
         self,
         include_hash=False,
         include_signature=True,
-        # FOR TESTING ONLY!
-        test_order_status=None,
     ):
         """Get a json representation of the SignedOrder"""
         order = {
@@ -128,8 +126,6 @@ class SignedOrder(db.Model):
             order["hash"] = self.hash
         if include_signature:
             order["signature"] = self.signature
-        if test_order_status:
-            order["test_order_status"] = test_order_status
         return order
 
     def update_bid_ask_prices(self):
@@ -222,8 +218,6 @@ class SignedOrder(db.Model):
             used for validation (default: True)
         """
         order = cls()
-        if "test_order_status" in order_json:
-            order.order_status = order_json["test_order_status"]
         if check_validity:
             if include_signature:
                 assert_valid(order_json, "/signedOrderSchema")
