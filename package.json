@@ -7,6 +7,6 @@
         "start-order-watcher-server": "node node_modules/@0x/order-watcher/lib/src/server.js"
     },
     "dependencies": {
-        "@0x/order-watcher": "3.0.4"
+        "@0x/order-watcher": "4.0.0"
     }
 }
