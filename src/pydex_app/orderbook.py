@@ -16,21 +16,15 @@ class Orderbook:
     """Abstraction for orderbook of signed orders"""
 
     @classmethod
-    def get_order_by_hash_if_exists(cls, order_hash):
-        """Retrieves a specific order by orderHash.
+    def get_order_by_hash(cls, order_hash):
+        """Retrieves a specific order by orderHash. Return 404 error if no matching 
+        signed order is found.
 
         Keyword arguments:
         order_hash -- string hash of the signed order to be queried
         """
-        signed_order_if_exists = SignedOrder.query.get_or_404(normalize_query_param(order_hash))
-        if signed_order_if_exists.order_status < 3:
-            raise Exception(f"order {order_hash} is INVALID. OrderStatus: {signed_order_if_exists.order_status}")
-        if signed_order_if_exists.order_status > 3:
-            raise Exception(
-                f"order {order_hash} has either been filled, cancelled or has expired.\
-                OrderStatus: {signed_order_if_exists.order_status}"
-            )
-        return to_api_order(signed_order_if_exists.to_json())
+        signed_order = SignedOrder.query.get_or_404(normalize_query_param(order_hash))
+        return to_api_order(signed_order.to_json())
 
     @classmethod
     def get_asset_pairs(
@@ -41,11 +35,13 @@ class Orderbook:
         per_page=DEFAULT_PER_PAGE
     ):
         """Retrieves a list of available asset pairs and the information
-        required to trade them
+        required to trade them.
 
         Keyword arguments:
-        asset_data_a -- string asset_data for maker side (i.e. `maker_asset_data`)
-        asset_data_b -- string asset_data for taker side (i.e. `taker_asset_data`)
+        asset_data_a -- string asset_data for maker side (i.e. `maker_asset_data`) (default: None)
+        asset_data_b -- string asset_data for taker side (i.e. `taker_asset_data`) (default: None)
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
         """
         asset_pairs = []
         normalized_asset_a = normalize_query_param(asset_data_a)
@@ -110,11 +106,15 @@ class Orderbook:
         return paginate(asset_pairs_data, page=page, per_page=per_page), len(asset_pairs_data)
 
     @classmethod
-    def add_order(cls, json_order):
+    def add_order(cls, order_json):
         """Add order to database without any validity checks.
         Note: OrderStatusHandler will check the status and activate orders
-        by adding them to handler"""
-        order = SignedOrder.from_json(json_order, check_validity=True)
+        by adding them to handler
+
+        Keyword arguments:
+        order_json -- json representation of the SignedOrder
+        """
+        order = SignedOrder.from_json(order_json, check_validity=True)
         db.session.add(order)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
 
@@ -138,6 +138,8 @@ class Orderbook:
             the long and short asset_data that make up the full set. (one of
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
         """
         normalized_quote_asset = normalize_query_param(quote_asset)
         normalized_base_asset = normalize_query_param(base_asset)
@@ -182,7 +184,7 @@ class Orderbook:
     ):
         """Get all asks to sell a `base_asset` against a `quote_asset`
         (i.e. ask is someone trying to sell the `base_asset` (`maker_asset`)
-        by collecting the `quote_asset` (`taker_asset`))
+        by collecting the `quote_asset` (`taker_asset`)).
 
         Keyword arguments:
         base_asset -- string asset_data to sell (i.e. `make_asset_data`)
@@ -191,6 +193,8 @@ class Orderbook:
             the long and short asset_data that make up the full set. (one of
             these must match the maker to taker asset, or will cause an
             exception to be thrown)
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
         """
         normalized_quote_asset = normalize_query_param(quote_asset)
         normalized_base_asset = normalize_query_param(base_asset)
@@ -244,17 +248,19 @@ class Orderbook:
         """Retrieves a list of orders given query parameters.
 
         Keyword arguments:
-        maker_asset_proxy_id -- string proxy id for the maker asset
-        taker_asset_proxy_id -- string proxy id for the taker asset
-        maker_asset_address -- string address for maker asset
-        taker_asset_address -- string address for taker asset
-        exchange_address -- string address for the 0x exchange contract
-        sender_address -- string address for the party reponsible to broadcast the order
-        maker_asset_data -- string asset_data for maker side (i.e. `maker_asset_data`)
-        taker_asset_data -- string asset_data for taker side (i.e. `taker_asset_data`)
-        maker_address -- string address for the maker
-        maker_address -- string address for the taker
-        fee_recipient_address -- string address for the fee recipient
+        maker_asset_proxy_id -- string proxy id for the maker asset (default: None)
+        taker_asset_proxy_id -- string proxy id for the taker asset (default: None)
+        maker_asset_address -- string address for maker asset (default: None)
+        taker_asset_address -- string address for taker asset (default: None)
+        exchange_address -- string address for the 0x exchange contract (default: None)
+        sender_address -- string address for the party reponsible to broadcast the order (default: None)
+        maker_asset_data -- string asset_data for maker side (default: None)
+        taker_asset_data -- string asset_data for taker side (default: None)
+        maker_address -- string address for the maker (default: None)
+        maker_address -- string address for the taker (default: None)
+        fee_recipient_address -- string address for the fee recipient (default: None)
+        page -- positive integer page number of paginated results (default: 1)
+        per_page -- positive integer number of records per page (default: 20)
         """
         pre_filter = dict(
             exchange_address=normalize_query_param(exchange_address),
