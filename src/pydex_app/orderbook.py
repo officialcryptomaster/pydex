@@ -32,7 +32,8 @@ class Orderbook:
         asset_data_a=None,
         asset_data_b=None,
         page=DEFAULT_PAGE,
-        per_page=DEFAULT_PER_PAGE
+        per_page=DEFAULT_PER_PAGE,
+        include_maybe_fillables=False
     ):
         """Retrieves a list of available asset pairs and the information
         required to trade them.
@@ -42,12 +43,13 @@ class Orderbook:
         asset_data_b -- string asset_data for taker side (i.e. `taker_asset_data`) (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         asset_pairs = []
         normalized_asset_a = normalize_query_param(asset_data_a)
         normalized_asset_b = normalize_query_param(asset_data_b)
 
-        query_filter = SignedOrder.order_status > 0
+        query_filter = SignedOrder.order_status >= 0 if include_maybe_fillables else SignedOrder.order_status > 0
         if asset_data_a:
             query_filter &= SignedOrder.maker_asset_data == normalized_asset_a
         if asset_data_b:
@@ -126,6 +128,7 @@ class Orderbook:
             exception to be thrown)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         normalized_quote_asset = normalize_query_param(quote_asset)
         normalized_base_asset = normalize_query_param(base_asset)
@@ -181,6 +184,7 @@ class Orderbook:
             exception to be thrown)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         normalized_quote_asset = normalize_query_param(quote_asset)
         normalized_base_asset = normalize_query_param(base_asset)
@@ -229,7 +233,8 @@ class Orderbook:
         taker_address=None,
         fee_recipient_address=None,
         page=DEFAULT_PAGE,
-        per_page=DEFAULT_PER_PAGE
+        per_page=DEFAULT_PER_PAGE,
+        include_maybe_fillables=False
     ):
         """Retrieves a list of orders given query parameters.
 
@@ -247,6 +252,7 @@ class Orderbook:
         fee_recipient_address -- string address for the fee recipient (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         pre_filter = dict(
             exchange_address=normalize_query_param(exchange_address),
@@ -262,7 +268,7 @@ class Orderbook:
         filter_object = {k: v for k, v in pre_filter.items() if v is not None}
         normalized_maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
         normalized_taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
-        query_filter = SignedOrder.order_status > 0
+        query_filter = SignedOrder.order_status >= 0 if include_maybe_fillables else SignedOrder.order_status > 0
         if maker_asset_proxy_id:
             query_filter &= SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id)
         if taker_asset_proxy_id:

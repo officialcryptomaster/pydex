@@ -61,7 +61,8 @@ class PyDexClient(ZeroExWeb3Client):
         asset_data_a=None,
         asset_data_b=None,
         page=DEFAULT_PAGE,
-        per_page=DEFAULT_PER_PAGE
+        per_page=DEFAULT_PER_PAGE,
+        include_maybe_fillables=False
     ):
         """Get a dict for querying the orderbook for relevant asset pairs
 
@@ -70,6 +71,7 @@ class PyDexClient(ZeroExWeb3Client):
         asset_data_b -- hexstr value for the second asset in the pair (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         params = dict(
             assetDataA=asset_data_a,
@@ -77,6 +79,7 @@ class PyDexClient(ZeroExWeb3Client):
             networkId=self._network_id,
             page=page,
             per_page=per_page,
+            include_maybe_fillables=include_maybe_fillables
         )
         return params
 
@@ -96,7 +99,8 @@ class PyDexClient(ZeroExWeb3Client):
         trader_address=None,
         fee_recipient_address=None,
         page=DEFAULT_PAGE,
-        per_page=DEFAULT_PER_PAGE
+        per_page=DEFAULT_PER_PAGE,
+        include_maybe_fillables=False
     ):
         """Get a dict for querying the orderbook for relevant asset pairs
 
@@ -116,6 +120,7 @@ class PyDexClient(ZeroExWeb3Client):
         fee_recipient_address -- hexstr address for the fee recipient (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         params = dict(
             makerAssetProxyId=maker_asset_proxy_id,
@@ -134,6 +139,7 @@ class PyDexClient(ZeroExWeb3Client):
             networkId=self._network_id,
             page=page,
             per_page=per_page,
+            include_maybe_fillables=include_maybe_fillables
         )
         return params
 
@@ -154,13 +160,14 @@ class PyDexClient(ZeroExWeb3Client):
             the full set of either the base or quote asset data (default: None)
         page -- positive integer page number of paginated results (default: 1)
         per_page -- positive integer number of records per page (default: 20)
+        include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         params = dict(
             baseAssetData=base_asset_data,
             quoteAssetData=quote_asset_data,
             networkId=self._network_id,
             page=page,
-            per_page=per_page,
+            per_page=per_page
         )
         if full_set_asset_data:
             params["fullSetAssetData"] = json.dumps(full_set_asset_data)

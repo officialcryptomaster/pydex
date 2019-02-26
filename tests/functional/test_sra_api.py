@@ -20,7 +20,7 @@ def test_post_order(
     )
     res = test_client.post(
         pydex_client.post_order_url,
-        json=order.to_json(test_order_status=3),
+        json=order.to_json()
     )
     assert res.status_code == 200
     # Retrieve order via get order endpoint
@@ -41,7 +41,8 @@ def test_query_orders(
     """
     orders_params = pydex_client.make_orders_query(
         maker_asset_data=asset_infos.VETH_ASSET_DATA,
-        taker_asset_data=asset_infos.LONG_ASSET_DATA
+        taker_asset_data=asset_infos.LONG_ASSET_DATA,
+        include_maybe_fillables=True
     )
     res = test_client.get(
         pydex_client.get_orders_url,
@@ -55,6 +56,7 @@ def test_query_orders(
     expected_maker_asset_proxy_id = "0xf47261b0"
     orders_params = pydex_client.make_orders_query(
         maker_asset_proxy_id=expected_maker_asset_proxy_id,
+        include_maybe_fillables=True
     )
     res = test_client.get(
         pydex_client.get_orders_url,
@@ -72,7 +74,7 @@ def test_query_orderbook(
     """Test whether the app can return a valid orderbook"""
     orderbook_params = pydex_client.make_orderbook_query(
         base_asset_data=asset_infos.VETH_ASSET_DATA,
-        quote_asset_data=asset_infos.LONG_ASSET_DATA,
+        quote_asset_data=asset_infos.LONG_ASSET_DATA
     )
     res = test_client.get(
         pydex_client.orderbook_url,
@@ -115,6 +117,7 @@ def test_query_asset_pairs(
     asset_pairs_params = pydex_client.make_asset_pairs_query(
         asset_data_a=asset_infos.VETH_ASSET_DATA,
         asset_data_b=asset_infos.LONG_ASSET_DATA,
+        include_maybe_fillables=True
     )
     res = test_client.get(
         pydex_client.asset_pairs_url,
@@ -122,7 +125,9 @@ def test_query_asset_pairs(
     )
     assert res.status_code == 200
     assert res.get_json() == expected_res
-    asset_pairs_params = pydex_client.make_asset_pairs_query()
+    asset_pairs_params = pydex_client.make_asset_pairs_query(
+        include_maybe_fillables=True
+    )
     res = test_client.get(
         pydex_client.asset_pairs_url,
         query_string=asset_pairs_params
