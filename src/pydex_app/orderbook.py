@@ -17,7 +17,7 @@ class Orderbook:
 
     @classmethod
     def get_order_by_hash(cls, order_hash):
-        """Retrieves a specific order by orderHash. Return 404 error if no matching 
+        """Retrieves a specific order by orderHash. Return 404 error if no matching
         signed order is found.
 
         Keyword arguments:
@@ -27,7 +27,7 @@ class Orderbook:
         return to_api_order(signed_order.to_json())
 
     @classmethod
-    def get_asset_pairs(
+    def get_asset_pairs(  # pylint: disable=too-many-locals
         cls,
         asset_data_a=None,
         asset_data_b=None,
@@ -46,31 +46,17 @@ class Orderbook:
         asset_pairs = []
         normalized_asset_a = normalize_query_param(asset_data_a)
         normalized_asset_b = normalize_query_param(asset_data_b)
-        if asset_data_a and asset_data_b:
-            asset_pairs = SignedOrder.query.with_entities(
-                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
-            ).filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data == normalized_asset_a)
-                & (SignedOrder.taker_asset_data == normalized_asset_b)
-            )
-        elif asset_data_a:
-            asset_pairs = SignedOrder.query.with_entities(
-                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
-            ).filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data == normalized_asset_a)
-            )
-        elif asset_data_b:
-            asset_pairs = SignedOrder.query.with_entities(
-                SignedOrder.maker_asset_data, SignedOrder.taker_asset_data
-            ).filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.taker_asset_data == normalized_asset_b)
-            )
-        else:
-            asset_pairs = SignedOrder.query.with_entities(SignedOrder.maker_asset_data, SignedOrder.taker_asset_data)
-        unique_asset_pairs = set(asset_pairs)
+
+        query_filter = SignedOrder.order_status > 0
+        if asset_data_a:
+            query_filter &= SignedOrder.maker_asset_data == normalized_asset_a
+        if asset_data_b:
+            query_filter &= SignedOrder.taker_asset_data == normalized_asset_b
+        asset_pairs = SignedOrder.query.with_entities(
+            SignedOrder.maker_asset_data,
+            SignedOrder.taker_asset_data
+        ).filter(query_filter)
+        unique_asset_pairs = set(sorted(asset_pairs))
 
         def erc721_asset_data_to_asset(asset_data):
             return {
@@ -276,24 +262,12 @@ class Orderbook:
         filter_object = {k: v for k, v in pre_filter.items() if v is not None}
         normalized_maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
         normalized_taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
-        if maker_asset_proxy_id and taker_asset_proxy_id:
-            orders = SignedOrder.query.filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
-                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
-            ).filter_by(**filter_object)
-        elif maker_asset_proxy_id:
-            orders = SignedOrder.query.filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id))
-            ).filter_by(**filter_object)
-        elif taker_asset_proxy_id:
-            orders = SignedOrder.query.filter(
-                (SignedOrder.order_status > 0)
-                & (SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id))
-            ).filter_by(**filter_object)
-        else:
-            orders = SignedOrder.query.filter(SignedOrder.order_status > 0).filter_by(**filter_object)
+        query_filter = SignedOrder.order_status > 0
+        if maker_asset_proxy_id:
+            query_filter &= SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id)
+        if taker_asset_proxy_id:
+            query_filter &= SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id)
+        orders = SignedOrder.query.filter(query_filter).filter_by(**filter_object)
         api_orders = [to_api_order(order.to_json()) for order in orders]
         return paginate(api_orders, page=page, per_page=per_page), len(api_orders)
 
