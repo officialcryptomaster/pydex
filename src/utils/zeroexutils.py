@@ -211,6 +211,19 @@ class ZeroExWeb3Client(Web3Client):
         _order["takerAssetData"] = HexBytes(order["takerAssetData"])
         return _order
 
+    def cancel_order(
+        self,
+        order,
+    ):
+        """Call the cancelOrder function of the 0x Exchange contract
+
+        Keyword arguments:
+        order -- dict representing a 0x order
+        """
+        order_to_cancel = self.get_order_for_web3(order)
+        func = self.zrx_exchange.functions.cancelOrder(order_to_cancel)
+        return self._build_and_send_tx(func)
+
     def fill_order(
         self,
         signed_order,
