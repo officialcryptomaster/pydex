@@ -10,7 +10,7 @@ from flask_cors import cross_origin
 from zero_ex.contract_addresses import NetworkId
 from zero_ex.json_schemas import assert_valid
 from pydex_app.orderbook import Orderbook
-from pydex_app.constants import NULL_ADDRESS
+from utils.web3utils import NULL_ADDRESS
 
 sra = Blueprint("sra", __name__)  # pylint: disable=invalid-name
 
@@ -179,9 +179,9 @@ def post_order_config():
     assert_valid(order, "/orderConfigRequestSchema")
     res = {
         "senderAddress": NULL_ADDRESS,
-        "feeRecipientAddress": current_app.config["PYDEX_ZRX_FEE_RECIPIENT"],
-        "makerFee": current_app.config["PYDEX_ZRX_MAKER_FEE"],
-        "takerFee": current_app.config["PYDEX_ZRX_TAKER_FEE"],
+        "feeRecipientAddress": current_app.config["PYDEX_ZX_FEE_RECIPIENT"],
+        "makerFee": current_app.config["PYDEX_ZX_MAKER_FEE"],
+        "takerFee": current_app.config["PYDEX_ZX_TAKER_FEE"],
     }
     # assert_valid(res, "/relayerApiOrderConfigResponseSchema")
     return current_app.response_class(
@@ -202,7 +202,7 @@ def get_post_recipients():
     page = int(request.args.get("page", current_app.config["OB_DEFAULT_PAGE"]))
     per_page = int(request.args.get(
         "per_page", current_app.config["OB_DEFAULT_PER_PAGE"]))
-    normalized_fee_recipient = current_app.config["PYDEX_ZRX_FEE_RECIPIENT"].lower()
+    normalized_fee_recipient = current_app.config["PYDEX_ZX_FEE_RECIPIENT"].lower()
     fee_recipients = [normalized_fee_recipient]
     res = {
         "total": len(fee_recipients),

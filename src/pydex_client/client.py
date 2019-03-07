@@ -6,11 +6,13 @@ author: officialcryptomaster@gmail.com
 import json
 import requests
 from zero_ex.json_schemas import assert_valid
-from utils.zeroexutils import ZeroExWeb3Client
-from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
+from utils.zeroexutils import ZxWeb3Client
+
+DEFAULT_PAGE = 1
+DEFAULT_PER_PAGE = 20
 
 
-class PyDexClient(ZeroExWeb3Client):
+class PyDexClient(ZxWeb3Client):
     """PyDEX Client to interact with PyDEX app"""
 
     __name__ = "PyDexClient"

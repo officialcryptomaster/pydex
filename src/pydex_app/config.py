@@ -6,8 +6,7 @@ author: officialcryptomaster@gmail.com
 
 import os
 from zero_ex.contract_addresses import NetworkId
-from pydex_app.constants import NULL_ADDRESS
-from utils.web3utils import to_base_unit_amount
+from utils.web3utils import to_base_unit_amount, NULL_ADDRESS
 
 
 class PydexBaseConfig:  # pylint: disable=too-few-public-methods
@@ -19,9 +18,9 @@ class PydexBaseConfig:  # pylint: disable=too-few-public-methods
     TESTING = False
     # PYDEX EXCHANGE PARAMS
     PYDEX_NETWORK_ID = NetworkId.RINKEBY.value
-    PYDEX_ZRX_FEE_RECIPIENT = NULL_ADDRESS
-    PYDEX_ZRX_MAKER_FEE = to_base_unit_amount(0)
-    PYDEX_ZRX_TAKER_FEE = to_base_unit_amount(0)
+    PYDEX_ZX_FEE_RECIPIENT = NULL_ADDRESS
+    PYDEX_ZX_MAKER_FEE = to_base_unit_amount(0)
+    PYDEX_ZX_TAKER_FEE = to_base_unit_amount(0)
     PYDEX_WHITELISTED_TOKENS = "*"
     # GUI DEFAULT PARAMS
     OB_DEFAULT_PAGE = 1

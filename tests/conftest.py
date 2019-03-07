@@ -17,11 +17,10 @@ from zero_ex.contract_addresses import NETWORK_TO_ADDRESSES, NetworkId
 
 from pydex_app import create_app
 from pydex_app.config import PydexBaseConfig
-from pydex_app.constants import NULL_ADDRESS
 from pydex_app.db_models import SignedOrder
 from pydex_client.client import PyDexClient
 from utils.logutils import setup_logger
-from utils.web3utils import to_base_unit_amount
+from utils.web3utils import to_base_unit_amount, NULL_ADDRESS
 
 LOGGER = setup_logger("TestLogger")
 
