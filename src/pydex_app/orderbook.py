@@ -23,7 +23,8 @@ class Orderbook:
         Keyword arguments:
         order_hash -- string hash of the signed order to be queried
         """
-        signed_order = SignedOrder.query.get_or_404(normalize_query_param(order_hash))
+        signed_order = SignedOrder.query.get_or_404(
+            normalize_query_param(order_hash))
         return to_api_order(signed_order.to_json())
 
     @classmethod
@@ -46,17 +47,18 @@ class Orderbook:
         include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         asset_pairs = []
-        normalized_asset_a = normalize_query_param(asset_data_a)
-        normalized_asset_b = normalize_query_param(asset_data_b)
+        asset_a = normalize_query_param(asset_data_a)
+        asset_b = normalize_query_param(asset_data_b)
 
-        query_filter = SignedOrder.order_status >= 0 if include_maybe_fillables else SignedOrder.order_status > 0
+        query_filter = SignedOrder.order_status_ >= 0 \
+            if include_maybe_fillables else SignedOrder.order_status_ > 0
         if asset_data_a:
-            query_filter &= SignedOrder.maker_asset_data == normalized_asset_a
+            query_filter &= SignedOrder.maker_asset_data_ == asset_a
         if asset_data_b:
-            query_filter &= SignedOrder.taker_asset_data == normalized_asset_b
+            query_filter &= SignedOrder.taker_asset_data_ == asset_b
         asset_pairs = SignedOrder.query.with_entities(
-            SignedOrder.maker_asset_data,
-            SignedOrder.taker_asset_data
+            SignedOrder.maker_asset_data_,
+            SignedOrder.taker_asset_data_,
         ).filter(query_filter)
         unique_asset_pairs = set(sorted(asset_pairs))
 
@@ -130,31 +132,27 @@ class Orderbook:
         per_page -- positive integer number of records per page (default: 20)
         include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
-        normalized_quote_asset = normalize_query_param(quote_asset)
-        normalized_base_asset = normalize_query_param(base_asset)
         bids = SignedOrder.query.filter(
-            (SignedOrder.maker_asset_data == normalized_quote_asset)
-            & (SignedOrder.taker_asset_data == normalized_base_asset)
-            & (SignedOrder.order_status > 0)
+            (SignedOrder.maker_asset_data_ == quote_asset)
+            & (SignedOrder.taker_asset_data_ == base_asset)
+            & (SignedOrder.order_status_ > 0)
         )
         bids_count = bids.count()
         bids = bids.order_by(
             # bid_price is price of taker_asset in units of maker_asset,
             # so we want highest price first
-            SignedOrder.bid_price.desc()
+            SignedOrder.bid_price_.desc()
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=normalized_quote_asset,
-                taker_asset=normalized_base_asset,
+                maker_asset=quote_asset,
+                taker_asset=base_asset,
                 full_asset_set=full_asset_set
             )
-            normalized_eq_maker_asset = normalize_query_param(eq_maker_asset)
-            normalized_eq_taker_asset = normalize_query_param(eq_taker_asset)
             eq_asks = SignedOrder.query.filter(
-                (SignedOrder.maker_asset_data == normalized_eq_maker_asset)
-                & (SignedOrder.taker_asset_data == normalized_eq_taker_asset)
-                & (SignedOrder.order_status > 0)
+                (SignedOrder.maker_asset_data_ == eq_maker_asset)
+                & (SignedOrder.taker_asset_data_ == eq_taker_asset)
+                & (SignedOrder.order_status_ > 0)
             )
             bids_count += eq_asks.count()
             bids = [bid.set_bid_as_sort_price() for bid in bids]
@@ -186,31 +184,27 @@ class Orderbook:
         per_page -- positive integer number of records per page (default: 20)
         include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
-        normalized_quote_asset = normalize_query_param(quote_asset)
-        normalized_base_asset = normalize_query_param(base_asset)
         asks = SignedOrder.query.filter(
-            (SignedOrder.maker_asset_data == normalized_base_asset)
-            & (SignedOrder.taker_asset_data == normalized_quote_asset)
-            & (SignedOrder.order_status > 0)
+            (SignedOrder.maker_asset_data_ == base_asset)
+            & (SignedOrder.taker_asset_data_ == quote_asset)
+            & (SignedOrder.order_status_ > 0)
         )
         asks_count = asks.count()
         asks = asks.order_by(
             # ask_price is price of maker_asset in units of taker_asset,
             # so we want the lowest price first
-            SignedOrder.ask_price
+            SignedOrder.ask_price_
         )
         if full_asset_set:
             eq_maker_asset, eq_taker_asset = cls.get_full_set_equivalent(
-                maker_asset=normalized_base_asset,
-                taker_asset=normalized_quote_asset,
+                maker_asset=base_asset,
+                taker_asset=quote_asset,
                 full_asset_set=full_asset_set
             )
-            normalized_eq_maker_asset = normalize_query_param(eq_maker_asset)
-            normalized_eq_taker_asset = normalize_query_param(eq_taker_asset)
             eq_bids = SignedOrder.query.filter(
-                (SignedOrder.maker_asset_data == normalized_eq_maker_asset)
-                & (SignedOrder.taker_asset_data == normalized_eq_taker_asset)
-                & (SignedOrder.order_status > 0)
+                (SignedOrder.maker_asset_data_ == eq_maker_asset)
+                & (SignedOrder.taker_asset_data_ == eq_taker_asset)
+                & (SignedOrder.order_status_ > 0)
             )
             asks_count += eq_bids.count()
             asks = [ask.set_ask_as_sort_price() for ask in asks]
@@ -255,24 +249,25 @@ class Orderbook:
         include_maybe_fillables -- include signed_orders with order_status of 0 (default: False)
         """
         pre_filter = dict(
-            exchange_address=normalize_query_param(exchange_address),
-            sender_address=normalize_query_param(sender_address),
-            maker_asset_data=normalize_query_param(maker_asset_data)
+            exchange_address_=normalize_query_param(exchange_address),
+            sender_address_=normalize_query_param(sender_address),
+            maker_asset_data_=normalize_query_param(maker_asset_data)
             or (adu.encode_erc20_asset_data(maker_asset_address) if maker_asset_address else None),
-            taker_asset_data=normalize_query_param(taker_asset_data)
+            taker_asset_data_=normalize_query_param(taker_asset_data)
             or (adu.encode_erc20_asset_data(taker_asset_address) if taker_asset_address else None),
-            maker_address=normalize_query_param(maker_address),
-            taker_address=normalize_query_param(taker_address),
-            fee_recipient_address=normalize_query_param(fee_recipient_address)
+            maker_address_=normalize_query_param(maker_address),
+            taker_address_=normalize_query_param(taker_address),
+            fee_recipient_address_=normalize_query_param(fee_recipient_address)
         )
         filter_object = {k: v for k, v in pre_filter.items() if v is not None}
-        normalized_maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
-        normalized_taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
-        query_filter = SignedOrder.order_status >= 0 if include_maybe_fillables else SignedOrder.order_status > 0
+        maker_asset_proxy_id = normalize_query_param(maker_asset_proxy_id)
+        taker_asset_proxy_id = normalize_query_param(taker_asset_proxy_id)
+        query_filter = SignedOrder.order_status_ >= 0 \
+            if include_maybe_fillables else SignedOrder.order_status_ > 0
         if maker_asset_proxy_id:
-            query_filter &= SignedOrder.maker_asset_data.startswith(normalized_maker_asset_proxy_id)
+            query_filter &= SignedOrder.maker_asset_data_.startswith(maker_asset_proxy_id)
         if taker_asset_proxy_id:
-            query_filter &= SignedOrder.taker_asset_data.startswith(normalized_taker_asset_proxy_id)
+            query_filter &= SignedOrder.taker_asset_data_.startswith(taker_asset_proxy_id)
         orders = SignedOrder.query.filter(query_filter).filter_by(**filter_object)
         api_orders = [to_api_order(order.to_json()) for order in orders]
         return paginate(api_orders, page=page, per_page=per_page), len(api_orders)

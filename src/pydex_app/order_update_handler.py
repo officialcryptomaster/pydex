@@ -50,8 +50,8 @@ class OrderUpdateHandler:
         self._app = app
         self.db_check_period_secs = db_check_period_secs
         self.heartbeat_period_secs = heatbeat_period
-        self._last_db_check_at = None
-        self._last_update_at = None
+        self._last_db_check_at_msecs = None
+        self._last_update_at_msecs = None
         self.running = False
         # For now, all unfillable handlers will just mark the order as unfillable,
         # but you can potentially change this if you desire...
@@ -77,18 +77,18 @@ class OrderUpdateHandler:
         """Fetch dict of orders which are not unfillable and have had updates"""
         fillables = {}
         maybe_fillables = {}
-        filter_cond = SignedOrder.order_status >= 0
-        if self._last_update_at:
-            filter_cond &= SignedOrder.last_updated_at > self._last_update_at
-        self._last_db_check_at = now_epoch_msecs()
+        filter_cond = SignedOrder.order_status_ >= 0
+        if self._last_update_at_msecs:
+            filter_cond &= SignedOrder.last_updated_at_msecs_ > self._last_update_at_msecs
+        self._last_db_check_at_msecs = now_epoch_msecs()
         non_unfillables = {o.hash: o for o in
                            SignedOrder.query.filter(filter_cond)}
         if non_unfillables:
-            self._last_update_at = max(
-                [o.last_updated_at for o in non_unfillables.values()])
+            self._last_update_at_msecs = max(
+                [o.last_updated_at_msecs for o in non_unfillables.values()])
             LOGGER.info("fetched %s non-unfillable orders", len(non_unfillables))
-            fillables = {h: o for h, o in non_unfillables.items() if o.order_status > 0}
-            maybe_fillables = {h: o for h, o in non_unfillables.items() if o.order_status == 0}
+            fillables = {h: o for h, o in non_unfillables.items() if o.order_status_ > 0}
+            maybe_fillables = {h: o for h, o in non_unfillables.items() if o.order_status_ == 0}
         return fillables, maybe_fillables
 
     def run(self):
@@ -102,10 +102,10 @@ class OrderUpdateHandler:
                 i += 1
                 if i % self.heartbeat_period_secs == 0:
                     LOGGER.debug(".")
-                if self._last_db_check_at:
+                if self._last_db_check_at_msecs:
                     wait_secs = (self.db_check_period_secs
                                  - (now_epoch_msecs()
-                                    - self._last_db_check_at) / 1000)
+                                    - self._last_db_check_at_msecs) / 1000)
                     if wait_secs > 0:
                         sleep(wait_secs)
                 fillables, maybe_fillables = self._fetch_non_unfillables()
@@ -175,7 +175,7 @@ class OrderUpdateHandler:
         self.owc.add_order(order.to_json())
         order_count_after = self.owc.get_stats()["result"]["orderCount"]
         if order_count_after > order_count_before:
-            order.order_status = OrderStatus.FILLABLE.value
+            order.order_status = OrderStatus.FILLABLE
             if commit:
                 self._commit_db()
 
@@ -189,7 +189,7 @@ class OrderUpdateHandler:
         LOGGER.debug("order with hash=%s is fillable", order_hash)
         order = self.get_order_by_hash(order_hash)
         if order:
-            order.order_status = OrderStatus.FILLABLE.value
+            order.order_status = OrderStatus.FILLABLE
             if commit:
                 self._commit_db()
 
@@ -212,7 +212,7 @@ class OrderUpdateHandler:
                      order_hash, reason)
         order = self.get_order_by_hash(order_hash)
         if order:
-            order.order_status = OrderStatus.UNFILLABLE.value
+            order.order_status = OrderStatus.UNFILLABLE
             if commit:
                 self._commit_db()
 

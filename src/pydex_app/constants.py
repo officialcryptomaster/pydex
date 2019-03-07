@@ -5,7 +5,6 @@ author: officialcryptomaster@gmail.com
 """
 from decimal import Decimal
 
-NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 ZERO = Decimal(0)
 ZERO_STR = "0"

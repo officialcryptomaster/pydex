@@ -5,7 +5,7 @@ author: officialcryptomaster@gmail.com
 """
 import time
 from datetime import datetime
-from pydex_app.constants import DEFAULT_PAGE, DEFAULT_PER_PAGE
+from decimal import Decimal
 
 
 def now_epoch_secs():
@@ -34,7 +34,13 @@ def epoch_msecs_to_local_time_str(epoch_msecs):
 
 
 def try_(func, *args, **kwargs):
-    """Try to call a function and return _default_val if it fails"""
+    """Try to call a function and return _default_val if it fails
+    Note: be careful that in order to have a fallback, you can supply
+    the keyword argument `_default_val`. If you supply anything other
+    than a keyword arg, it will result in it being passed to the wrapped
+    function and could cause unexpected behavior including always failing
+    with default value of None.
+    """
     _default_val = kwargs.pop("_default_val", None)
     try:
         return func(*args, **kwargs)
@@ -47,7 +53,13 @@ def normalize_query_param(query_param):
     return query_param.lower() if query_param else None
 
 
-def paginate(arr, page=DEFAULT_PAGE, per_page=DEFAULT_PER_PAGE):
+def assert_like_integer(value):
+    """Assert value is representing an integer"""
+    decimal_val = Decimal(value)
+    assert decimal_val == round(decimal_val), "value not like an integer"
+
+
+def paginate(arr, page=1, per_page=20):
     """Given an ordered iterable like a list and a page number, return
     a slice of the iterable which whose elements make up the page.
 
