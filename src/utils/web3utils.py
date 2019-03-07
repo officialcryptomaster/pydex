@@ -10,6 +10,7 @@ from web3 import Web3, HTTPProvider
 from eth_account.messages import defunct_hash_message
 from zero_ex.contract_addresses import NetworkId
 
+ETH_BASE_UNIT_DECIMALS = 18
 NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 RE_ADDRESS = re.compile("^(0x)?[0-9a-f]{40}$")
@@ -34,8 +35,6 @@ def get_clean_address_or_throw(address):
     """
     if not isinstance(address, str):
         address = HexBytes(address).rjust(10, b"\0").hex()
-    if address.startswith("0x"):
-        address = address[2:]
     if not RE_ADDRESS.match(address.lower()):
         raise TypeError("address looks invalid: '{}'".format(address))
     if not address.startswith("0x"):
@@ -43,7 +42,7 @@ def get_clean_address_or_throw(address):
     return address
 
 
-def to_base_unit_amount(amount, decimals=18):
+def to_base_unit_amount(amount, decimals=ETH_BASE_UNIT_DECIMALS):
     """convert an amount to base unit amount string
 
     Keyword arguments:
@@ -53,7 +52,7 @@ def to_base_unit_amount(amount, decimals=18):
     return "{:.0f}".format(Decimal(amount) * 10 ** int(decimals))
 
 
-def from_base_unit_amount(base_amount, decimals=18):
+def from_base_unit_amount(base_amount, decimals=ETH_BASE_UNIT_DECIMALS):
     """convert an amount from base unit amount to regular units
 
     Keyword arguments:
@@ -96,11 +95,18 @@ class Web3Client:
 
     def __str__(self):
         return (
-            f"[{self.__name__}](network:{self._network_id}"
+            f"[{self.__name__}]"
+            f"(network:{self._network_id}"
             f", web_3rpc_url={self._web3_rpc_url}"
-            f", account_addres={self.account_address}")
+            f", account_addres={self.account_address}"
+            f"{self._str_arg_append()})"
+        )
 
     __repr__ = __str__
+
+    def _str_arg_append(self):  # pylint: disable=no-self-use
+        """String to append to list of params for `__str__`"""
+        return ""
 
     @property
     def private_key(self):
@@ -203,3 +209,8 @@ class Web3Client:
     def get_checksum_address(cls, addr):
         """Get a checksum address from a regular address"""
         return Web3.toChecksumAddress(addr.lower())
+
+    def get_eth_balance(self):
+        """Get ether balance associated with client address"""
+        return self.web3_eth.getBalance(
+            self.account_address_checksumed) / 10**ETH_BASE_UNIT_DECIMALS

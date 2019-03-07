@@ -572,7 +572,7 @@ class ZxWeb3Client(Web3Client):
         web3_rpc_url,
         private_key=None,
     ):
-        """Create an instance of the Web3Client with a private key
+        """Create an instance of the ZeroExWeb3Client
 
         Keyword arguments:
         network_id -- numerable id of networkId convertible to `constants.NetworkId`

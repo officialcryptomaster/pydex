@@ -49,14 +49,9 @@ class PyDexClient(ZxWeb3Client):
         if self._pydex_api_url.endswith("/"):
             self._pydex_api_url = self._pydex_api_url[:-1]
 
-    def __str__(self):
-        return (
-            f"[{self.__name__}](network_id={self._network_id}"
-            f"web3_rpc_url={self._web3_rpc_url}"
-            f", pydex_api_url={self._pydex_api_url})"
-        )
-
-    __repr__ = __str__
+    def _str_arg_append(self):  # pylint: disable=no-self-use
+        """String to append to list of params for `__str__`"""
+        return f", pydex_api_url={self._pydex_api_url}"
 
     def make_asset_pairs_query(
         self,

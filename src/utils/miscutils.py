@@ -48,11 +48,6 @@ def try_(func, *args, **kwargs):
         return _default_val
 
 
-def normalize_query_param(query_param):
-    """Normalize query parameter to lower case"""
-    return query_param.lower() if query_param else None
-
-
 def assert_like_integer(value):
     """Assert value is representing an integer"""
     decimal_val = Decimal(value)
@@ -67,10 +62,15 @@ def paginate(arr, page=1, per_page=20):
     arr -- an ordered iterable like a list
     page -- postive integer number of page to retrieve elements for. Note that
         Pages start at 1 (default: 1)
-    per_age -- positive integer number of elements per page
+    per_page -- positive integer number of elements per page (default: 20)
     """
     page_idx = page - 1
     return arr[page_idx: page_idx+per_page]
+
+
+def normalize_query_param(query_param):
+    """Normalize query parameter to lower case"""
+    return query_param.lower() if query_param else None
 
 
 def to_api_order(signed_order_json):
