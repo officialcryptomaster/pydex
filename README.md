@@ -1,5 +1,7 @@
+PyDEX: Python 0x Relayer
+========================
 Introduction
-=============
+------------
 PyDEX is a python-based DEX (decentralized exchange) which makes use of the [0x Protocol](https://0x.org/). The initial goal of this project is to deliver an out-of-the-box python implementation of the [Standard Relayer API](https://github.com/0xProject/standard-relayer-api) which utilizes the [open orderbook relayer model](https://0x.org/wiki#Open-Orderbook), much like the typescript-based [0x-launch-kit](https://github.com/0xproject/0x-launch-kit) provided by the 0x team. However, we do plan to extend this beyond just open orderbook model to a more sophisticated [matching relayer model](https://0x.org/wiki#Matching) and this would take us beyond the SRA into a custom API which is yet to be designed.
 
 Setup Instructions
@@ -78,3 +80,9 @@ As always, make sure the environment is active (`source pydex_env/bin/activate`)
 ```
 PYTHONPATH=../src jupyter notebook
 ```
+
+Tips
+----
+If you found this project useful, and would like to tip the founders ([officialcryptomaster](https://github.com/officialcryptomaster/) and [michaelhly](https://github.com/michaelhly/)) you can send ETH or other ethereum assets to the following ETH address:
+`0xf7A3668F8Bc40Af03579FC00bEdc31e4Cc662624`
+Thanks!
