@@ -56,7 +56,7 @@ class SignedOrder(ZxSignedOrder, db.Model):
     # salt is 32 bytes or 256 bits which is at most 78 decimal chars
     salt_ = DB_COL("salt", DB_STR(78), nullable=False)
     # integer seconds since unix epoch (interpret as UTC timestamp)
-    expiration_time_secs_ = DB_COL("expiration_time_secs", DB_INT, nullable=False)
+    expiration_time_seconds_ = DB_COL("expiration_time_seconds", DB_INT, nullable=False)
     # asset data for ERC20 is 36 bytes, and 68 bytes for ERC721, so that is a
     # maximum of 138 hex chars  (includes leading '0x')
     maker_asset_data_ = DB_COL("maker_asset_data", DB_STR(138), nullable=False)

@@ -142,7 +142,7 @@ def make_veth_signed_order(
         price,
         side,
         maker_address=pydex_client.account_address,
-        expiration_time_secs=600,
+        expiration_time_seconds=600,
         maker_fee="0",
         taker_fee="0",
         salt="1234567890",
@@ -182,7 +182,7 @@ def make_veth_signed_order(
             maker_fee = to_base_unit_amount(maker_fee)
         if not isinstance(taker_fee, str):
             taker_fee = to_base_unit_amount(taker_fee)
-        expiration_time_secs = int(time.time() + expiration_time_secs)
+        expiration_time_seconds = int(time.time() + expiration_time_seconds)
 
         order = SignedOrder()
         order.maker_address = maker_address
@@ -193,7 +193,7 @@ def make_veth_signed_order(
         order.taker_asset_amount = taker_amount
         order.maker_fee = "{:.0f}".format(Decimal(maker_fee))
         order.taker_fee = "{:.0f}".format(Decimal(taker_fee))
-        order.expiration_time_secs = expiration_time_secs
+        order.expiration_time_seconds = expiration_time_seconds
         order.salt = salt
         order.maker_asset_data = maker_asset_data
         order.taker_asset_data = taker_asset_data

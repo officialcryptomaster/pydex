@@ -116,7 +116,7 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
         self.maker_fee_ = None
         self.taker_fee_ = None
         self.salt_ = None
-        self.expiration_time_secs_ = None
+        self.expiration_time_seconds_ = None
         self.maker_asset_data_ = None
         self.taker_asset_data_ = None
         self.signature_ = None
@@ -140,7 +140,7 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
         self.maker_fee = kwargs.get("maker_fee") or "0"
         self.salt = kwargs.get("salt") or "0"
         # default expiry to one minute after creation
-        self.expiration_time_secs = kwargs.get("expiration_time_secs") \
+        self.expiration_time_seconds = kwargs.get("expiration_time_seconds") \
             or self._created_at_msecs_ / 1000. + 60
         self.maker_asset_data = kwargs.get("maker_asset_data") or None
         self.taker_asset_data = kwargs.get("taker_asset_data") or None
@@ -150,14 +150,20 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
         return (
             f"[{self.__name__}]"
             f"(hash={self.hash}"
-            f" | maker_asset_amount={self.maker_asset_amount}"
-            f" | taker_asset_amount={self.taker_asset_amount}"
-            f" | maker_asset_data={self.maker_asset_data}"
-            f" | taker_asset_data={self.taker_asset_data}"
-            f" | maker_address={self.maker_address}"
-            f" | taker_address={self.taker_address}"
-            f" | signature={self.signature}"
-            f" | expires={self.expiration_time}"
+            f", maker_address={self.maker_address}"
+            f", taker_address={self.taker_address}"
+            f", fee_recipient_address={self.fee_recipient_address}"
+            f", sender_address={self.sender_address}"
+            f", exchange_address={self.exchange_address}"
+            f", maker_asset_amount={self.maker_asset_amount}"
+            f", taker_asset_amount={self.taker_asset_amount}"
+            f", maker_fee={self.maker_fee}"
+            f", taker_fee={self.taker_fee}"
+            f", salt={self.salt}"
+            f", maker_asset_data={self.maker_asset_data}"
+            f", taker_asset_data={self.taker_asset_data}"
+            f", expires={self.expiration_time}"
+            f", signature={self.signature}"
             ")"
         )
 
@@ -322,21 +328,21 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
     @property
     def expiration_time(self):
         """Get expiration as naive datetime"""
-        return try_(epoch_secs_to_local_time_str, self.expiration_time_secs_)
+        return try_(epoch_secs_to_local_time_str, self.expiration_time_seconds_)
 
     @property
-    def expiration_time_secs(self):
+    def expiration_time_seconds(self):
         """Get expiration time in seconds since epoch"""
-        return self.expiration_time_secs_
+        return self.expiration_time_seconds_
 
-    @expiration_time_secs.setter
-    def expiration_time_secs(self, value):
+    @expiration_time_seconds.setter
+    def expiration_time_seconds(self, value):
         """Set expiration time secs from numeric-like
 
         Keyword argument:
         value -- numeric-like expiration time in seconds since epoch
         """
-        self.expiration_time_secs_ = int("{:.0f}".format(Decimal(value)))
+        self.expiration_time_seconds_ = int("{:.0f}".format(Decimal(value)))
 
     @property
     def maker_asset_data(self):
@@ -389,12 +395,12 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
     @property
     def bid_price(self):
         """Get bid price as a Decimal"""
-        return try_(Decimal, self.bid_price_, _default=Decimal(0))
+        return try_(Decimal, self.bid_price_, default_=Decimal(0))
 
     @property
     def ask_price(self):
         """Get ask price as a Decimal"""
-        return try_(Decimal, self.ask_price_, _default=Decimal("9" * 32))
+        return try_(Decimal, self.ask_price_, default_=Decimal("9" * 32))
 
     @property
     def sort_price(self):
@@ -468,7 +474,7 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
             "makerFee": self.maker_fee_,
             "takerFee": self.taker_fee_,
             "salt": self.salt_,
-            "expirationTimeSeconds": self.expiration_time_secs_,
+            "expirationTimeSeconds": self.expiration_time_seconds_,
             "makerAssetData": self.maker_asset_data_,
             "takerAssetData": self.taker_asset_data_,
         }
@@ -554,7 +560,7 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
         order.salt = order_json["salt"]
         order.exchange_address = order_json["exchangeAddress"]
         order.fee_recipient_address = order_json["feeRecipientAddress"]
-        order.expiration_time_secs = order_json["expirationTimeSeconds"]
+        order.expiration_time_seconds = order_json["expirationTimeSeconds"]
         if include_signature:
             order.signature = order_json["signature"]
         order.update()
