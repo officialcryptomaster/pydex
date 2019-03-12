@@ -37,7 +37,7 @@ def asset_infos():
     Ideally, need to enhance this later to dynamically pull this information
     from the configured network.
     """
-    class AssetInfos:  # pylint: disable=too-few-public-methods
+    class AssetInfos:
         """Convenience class holding asset info"""
         VETH_TOKEN = "0xc4abc01578139e2105d9c9eba0b0aa6f6a60d082"
         VETH_ASSET_DATA = "0xf47261b0000000000000000000000000c4abc01578139e2105d9c9eba0b0aa6f6a60d082"
@@ -84,7 +84,7 @@ def private_key():
 
 
 @pytest.fixture(scope="session")
-def test_app(network_id):  # pylint: disable=redefined-outer-name
+def test_app(network_id):
     """PyDex flask app instance with fresh database"""
     temp_db_path = os.path.join(
         os.getcwd(),
@@ -95,7 +95,7 @@ def test_app(network_id):  # pylint: disable=redefined-outer-name
         os.makedirs(base_dir)
     LOGGER.info("temp_db_path: %s", temp_db_path)
 
-    class PydexTestConfig(PydexBaseConfig):  # pylint: disable=too-few-public-methods
+    class PydexTestConfig(PydexBaseConfig):
         """Test Config"""
         TESTING = True
         SQLALCHEMY_DATABASE_URI = "sqlite:///{}".format(temp_db_path)

@@ -60,7 +60,7 @@ class ZxOrderStatus(Enum):
     CANCELLED = 6  # Order has been cancelled
 
 
-class ZxOrderInfo:  # pylint: disable=too-few-public-methods
+class ZxOrderInfo:
     """A Web3-compatible representation of the Exchange.OrderInfo struct"""
 
     __name__ = "OrderInfo"

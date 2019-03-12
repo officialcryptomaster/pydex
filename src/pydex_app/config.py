@@ -9,7 +9,7 @@ from zero_ex.contract_addresses import NetworkId
 from utils.web3utils import to_base_unit_amount, NULL_ADDRESS
 
 
-class PydexBaseConfig:  # pylint: disable=too-few-public-methods
+class PydexBaseConfig:
     """Base configuration class for pyDEX App"""
     SECRET_KEY = os.environ.get("SECRET_KEY", "development secret key is not safe")
     SQLALCHEMY_DATABASE_URI = "sqlite:///{}".format(
