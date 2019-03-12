@@ -84,7 +84,7 @@ def private_key():
 
 
 @pytest.fixture(scope="session")
-def test_app(network_id):
+def test_app(network_id):  # pylint: disable=redefined-outer-name
     """PyDex flask app instance with fresh database"""
     temp_db_path = os.path.join(
         os.getcwd(),
