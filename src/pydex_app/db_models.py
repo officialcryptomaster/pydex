@@ -128,4 +128,4 @@ class SignedOrder(ZxSignedOrder, db.Model):
     @property
     def fill_amount(self):
         """Get taker fill amount as Decimal in base units"""
-        return try_(int, self.fill_amount_, _default_value=0)
+        return try_(int, self.fill_amount_, _default=0)

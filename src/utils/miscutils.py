@@ -34,14 +34,14 @@ def epoch_msecs_to_local_time_str(epoch_msecs):
 
 
 def try_(func, *args, **kwargs):
-    """Try to call a function and return _default_val if it fails
+    """Try to call a function and return _default if it fails
     Note: be careful that in order to have a fallback, you can supply
-    the keyword argument `_default_val`. If you supply anything other
+    the keyword argument `_default`. If you supply anything other
     than a keyword arg, it will result in it being passed to the wrapped
     function and could cause unexpected behavior including always failing
     with default value of None.
     """
-    _default_val = kwargs.pop("_default_val", None)
+    _default_val = kwargs.pop("_default", None)
     try:
         return func(*args, **kwargs)
     except Exception:  # pylint: disable=broad-except

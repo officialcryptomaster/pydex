@@ -389,12 +389,12 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
     @property
     def bid_price(self):
         """Get bid price as a Decimal"""
-        return try_(Decimal, self.bid_price_, Decimal(0))
+        return try_(Decimal, self.bid_price_, _default=Decimal(0))
 
     @property
     def ask_price(self):
         """Get ask price as a Decimal"""
-        return try_(Decimal, self.ask_price_, Decimal("9" * 32))
+        return try_(Decimal, self.ask_price_, _default=Decimal("9" * 32))
 
     @property
     def sort_price(self):
