@@ -76,3 +76,13 @@ def paginate(arr, page=1, per_page=20):
     """
     page_idx = page - 1
     return arr[page_idx: page_idx+per_page]
+
+
+def normalize_query_param(query_param):
+    """Normalize query parameter to lower case"""
+    return query_param.lower() if query_param else None
+
+
+def to_api_order(signed_order_json):
+    """Given a signed order json, make compatible with 0x API Order Schema"""
+    return {"metaData": {}, "order": signed_order_json}
