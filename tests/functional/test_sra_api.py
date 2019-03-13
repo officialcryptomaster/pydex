@@ -179,5 +179,5 @@ def test_to_and_from_json_signed_order(
     print(pydex_client.private_key)
     print(order.update().hash)
     # sign the order
-    order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
+    order.signature = pydex_client.sign_hash_zx_compat(order.update().hash)
     assert order.to_json(include_hash=True) == expected_order_json

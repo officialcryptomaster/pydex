@@ -199,7 +199,7 @@ def make_veth_signed_order(
         order.taker_asset_data = taker_asset_data
         order.exchange_address = exchange_address
         # sign the hash
-        order.signature = pydex_client.sign_hash_0x_compat(order.update().hash)
+        order.signature = pydex_client.sign_hash_zx_compat(order.update().hash)
         # make sure the signed_order is valid
         assert_valid(order.to_json(), "/signedOrderSchema")
         return order

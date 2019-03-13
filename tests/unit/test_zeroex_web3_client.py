@@ -34,7 +34,7 @@ def test_sign_hash(zx_client):  # pylint: disable=redefined-outer-name
     """Make sure signing a valid hash give correct result"""
     # hash of an empty order
     hash_hex = "0xfaa49b35faeb9197e9c3ba7a52075e6dad19739549f153b77dfcf59408a4b422"
-    signature_0x = zx_client.sign_hash_0x_compat(hash_hex)
+    signature_0x = zx_client.sign_hash_zx_compat(hash_hex)
     expected_signature_0x = (
         "0x1bc5358e0855fc9352c64676765f80fcd3d1d235ef41e910c9a59b22fcbd573e5"
         "44caa9bce4c99c98a6e5da329375059e8202f71631c5a6e26738b79817161c9ac03")

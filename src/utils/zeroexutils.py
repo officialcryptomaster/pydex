@@ -5,7 +5,7 @@ author: officialcryptomaster@gmail.com
 """
 from decimal import Decimal
 from enum import Enum
-from eth_utils import keccak
+from eth_utils import keccak, to_checksum_address
 from hexbytes import HexBytes
 from zero_ex.json_schemas import assert_valid
 from zero_ex.contract_artifacts import abi_by_name
@@ -60,7 +60,7 @@ class ZxOrderStatus(Enum):
     CANCELLED = 6  # Order has been cancelled
 
 
-class ZxOrderInfo:
+class ZxOrderInfo:  # pylint: disable=too-few-public-methods
     """A Web3-compatible representation of the Exchange.OrderInfo struct"""
 
     __name__ = "OrderInfo"
@@ -461,27 +461,68 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
         self,
         include_hash=False,
         include_signature=True,
+        include_exchange_address=None,
+        for_web3=False,
     ):
-        """Get a json representation of the SignedOrder"""
-        order = {
-            "makerAddress": self.maker_address_,
-            "takerAddress": self.taker_address_,
-            "feeRecipientAddress": self.fee_recipient_address_,
-            "senderAddress": self.sender_address_,
-            "exchangeAddress": self.exchange_address_,
-            "makerAssetAmount": self.maker_asset_amount_,
-            "takerAssetAmount": self.taker_asset_amount_,
-            "makerFee": self.maker_fee_,
-            "takerFee": self.taker_fee_,
-            "salt": self.salt_,
-            "expirationTimeSeconds": self.expiration_time_seconds_,
-            "makerAssetData": self.maker_asset_data_,
-            "takerAssetData": self.taker_asset_data_,
-        }
-        if include_hash:
-            order["hash"] = self.hash
-        if include_signature:
-            order["signature"] = self.signature
+        """Get a json representation of the SignedOrder
+
+        Keyword arguments:
+        include_hash -- boolean of whether to include the hash field
+            (default: False)
+        include_signature -- boolean of whether to include the signature
+            (default: True)
+        include_exchange_address -- boolean of whether to include the
+            exchange_address field (default: None which means if set to
+            False for web3 and set to True for non-web3 use case)
+        for_web3 -- boolean of whether the value types should be changed
+            for calling 0x contracts through web3 library (default: False)
+        """
+        if for_web3:
+            if include_exchange_address is None:
+                include_exchange_address = False
+            order = {
+                "makerAddress": to_checksum_address(self.maker_address_),
+                "takerAddress": to_checksum_address(self.taker_address_),
+                "feeRecipientAddress": to_checksum_address(self.fee_recipient_address_),
+                "senderAddress": to_checksum_address(self.sender_address_),
+                "makerAssetAmount": int(self.maker_asset_amount_),
+                "takerAssetAmount": int(self.taker_asset_amount_),
+                "makerFee": int(self.maker_fee_),
+                "takerFee": int(self.taker_fee_),
+                "salt": int(self.salt_),
+                "expirationTimeSeconds": int(self.expiration_time_seconds_),
+                "makerAssetData": HexBytes(self.maker_asset_data_),
+                "takerAssetData": HexBytes(self.taker_asset_data_),
+            }
+            if include_hash:
+                order["hash"] = HexBytes(self.hash)
+            if include_signature:
+                order["signature"] = HexBytes(self.signature)
+            if include_exchange_address:
+                order["exchangeAddress"] = HexBytes(self.exchange_address_)
+        else:
+            if include_exchange_address is None:
+                include_exchange_address = True
+            order = {
+                "makerAddress": self.maker_address_,
+                "takerAddress": self.taker_address_,
+                "feeRecipientAddress": self.fee_recipient_address_,
+                "senderAddress": self.sender_address_,
+                "makerAssetAmount": self.maker_asset_amount_,
+                "takerAssetAmount": self.taker_asset_amount_,
+                "makerFee": self.maker_fee_,
+                "takerFee": self.taker_fee_,
+                "salt": self.salt_,
+                "expirationTimeSeconds": self.expiration_time_seconds_,
+                "makerAssetData": self.maker_asset_data_,
+                "takerAssetData": self.taker_asset_data_,
+            }
+            if include_hash:
+                order["hash"] = self.hash
+            if include_signature:
+                order["signature"] = self.signature_
+            if include_exchange_address:
+                order["exchangeAddress"] = self.exchange_address_
         return order
 
     @classmethod
@@ -568,7 +609,7 @@ class ZxSignedOrder:  # pylint: disable=too-many-public-methods
 
 
 class ZxWeb3Client(Web3Client):
-    """Client for interacting with 0x """
+    """Client for interacting with 0x"""
 
     __name__ = "ZxWeb3Client"
 
@@ -596,7 +637,7 @@ class ZxWeb3Client(Web3Client):
 
     @property
     def exchange_address_checksumed(self):
-        """Return a checksum version of the address of the  0x exchange contract"""
+        """Return a checksum version of the address of the 0x Exchange contract"""
         return self.get_checksum_address(self._contract_addressess.exchange)
 
     @property
@@ -608,18 +649,18 @@ class ZxWeb3Client(Web3Client):
                 abi=abi_by_name("exchange"))
         return self._zx_exchange
 
-    def sign_hash_0x_compat(self, hash_hex):
-        """Returns a 0x-compatible signature from signing a hash_hex with eth-sign
+    def sign_hash_zx_compat(self, hash_hex):
+        """Returns a zx-compatible signature from signing a hash_hex with eth-sign
 
         Keyword argument:
         hash_hex -- hex bytes or hex str of a hash to sign
             (must be convertile to `HexBytes`)
         """
         ec_signature = self.sign_hash(hash_hex)
-        return self.get_0x_signature_from_ec_signature(ec_signature=ec_signature)
+        return self.get_zx_signature_from_ec_signature(ec_signature=ec_signature)
 
     @staticmethod
-    def get_0x_signature_from_ec_signature(ec_signature):
+    def get_zx_signature_from_ec_signature(ec_signature):
         """Returns a hex string 0x-compatible signature from an eth-sign ec_signature
 
         0x signature is a hexstr made from the concatenation of the hexstr of the "v",
@@ -639,67 +680,37 @@ class ZxWeb3Client(Web3Client):
         # append "03" to specify signature type of eth-sign
         return v + r + s + "03"
 
-    @classmethod
-    def get_order_for_web3(cls, order_json):
-        """Get a copy of the order json converted to web3 consumption
-
-        Keyword argument:
-        order_json -- a dict conforming to "/orderSchema" defined in:
-            <https://github.com/0xProject/0x-monorepo/tree/development/packages/json-schemas/schemas>
-        """
-        order = order_json
-        _order = {}
-        _order["makerAddress"] = cls.get_checksum_address(order["makerAddress"])
-        _order["takerAddress"] = cls.get_checksum_address(order["takerAddress"])
-        _order["feeRecipientAddress"] = cls.get_checksum_address(order["feeRecipientAddress"])
-        _order["senderAddress"] = cls.get_checksum_address(order["senderAddress"])
-        _order["exchangeAddress"] = cls.get_checksum_address(order["exchangeAddress"])
-        _order["makerAssetAmount"] = int(order["makerAssetAmount"])
-        _order["takerAssetAmount"] = int(order["takerAssetAmount"])
-        _order["makerFee"] = int(order["makerFee"])
-        _order["takerFee"] = int(order["takerFee"])
-        _order["expirationTimeSeconds"] = int(order["expirationTimeSeconds"])
-        _order["salt"] = int(order["salt"])
-        _order["makerAssetData"] = HexBytes(order["makerAssetData"])
-        _order["takerAssetData"] = HexBytes(order["takerAssetData"])
-        return _order
-
-    def cancel_order(
+    def cancel_zx_order(
         self,
-        order,
+        zx_signed_order,
     ):
         """Call the cancelOrder function of the 0x Exchange contract
 
         Keyword arguments:
-        order -- dict representing a 0x order
+        zx_signed_order -- instance of `ZxSignedOrder` to cancel
         """
-        order_to_cancel = self.get_order_for_web3(order)
-        func = self.zx_exchange.functions.cancelOrder(order_to_cancel)
+        order = zx_signed_order.to_json(for_web3=True)
+        func = self.zx_exchange.functions.cancelOrder(order)
         return self._build_and_send_tx(func)
 
-    def fill_order(
+    def fill_zx_order(
         self,
-        signed_order_json,
+        zx_signed_order,
         taker_fill_amount,
         base_unit_decimals=18,
     ):
         """Call the fillOrder function of the 0x Exchange contract
 
         Keyword arguments:
-        order -- ZxSignedOrder object or a dict representing a 0x order with
-            signature on it
-        signed_order_json -- a dict conforming to "/signedOrderSchema" defined in:
-            <https://github.com/0xProject/0x-monorepo/tree/development/packages/json-schemas/schemas>
-        taker_fill_amount -- integer amount of taker Asset (will be converted
+        zx_signed_order -- instance of `ZxSignedOrder` to fill
+        taker_fill_amount -- integer amount of taker asset (will be converted
             to base units by multiplying by 10**base_unit_decimals)
         """
-        signed_order = signed_order_json
-        assert_valid(signed_order, "/signedOrderSchema")
-        signature = HexBytes(signed_order["signature"])
-        signed_order_web3 = self.get_order_for_web3(signed_order)
+        signed_order = zx_signed_order.to_json(for_web3=True)
+        signature = HexBytes(zx_signed_order.signature)
         taker_fill_amount = int(taker_fill_amount * 10**base_unit_decimals)
         func = self.zx_exchange.functions.fillOrder(
-            signed_order_web3,
+            signed_order,
             taker_fill_amount,
             signature
         )
