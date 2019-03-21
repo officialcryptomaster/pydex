@@ -110,13 +110,13 @@ class SignedOrder(ZxSignedOrder, db.Model):
 
     @property
     def last_updated_at(self):
-        """Get last update time timestamp as naive DateTime"""
+        """Get last update time timestamp as naive datetime"""
         return try_(epoch_msecs_to_local_time_str, self.last_updated_at_msecs_)
 
     @property
     def order_status(self):
-        """Get order status as OrderStatusEnum"""
-        return self.order_status_
+        """Get order status as `OrderStatus` Enum"""
+        return OrderStatus(self.order_status_)
 
     @order_status.setter
     def order_status(self, value):
