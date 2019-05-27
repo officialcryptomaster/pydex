@@ -646,7 +646,7 @@ class ZxWeb3Client(Web3Client):
         if self._zx_exchange is None:
             self._zx_exchange = self._web3_eth.contract(
                 address=self.exchange_address_checksumed,
-                abi=abi_by_name("exchange"))
+                abi=abi_by_name("Exchange"))
         return self._zx_exchange
 
     def sign_hash_zx_compat(self, hash_hex):
