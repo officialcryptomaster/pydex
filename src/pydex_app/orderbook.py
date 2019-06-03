@@ -174,7 +174,7 @@ class Orderbook:
         by collecting the `quote_asset` (`taker_asset`)).
 
         Keyword arguments:
-        base_asset -- string asset_data to sell (i.e. `make_asset_data`)
+        base_asset -- string asset_data to sell (i.e. `maker_asset_data`)
         quote_asset -- string asset_data to get in return (i.e. `taker_asset_data`)
         full_asset_set -- dict with 'LONG' and 'SHORT' keys pointing to
             the long and short asset_data that make up the full set. (one of
