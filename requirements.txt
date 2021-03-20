@@ -25,7 +25,7 @@ hexbytes==0.1.0
 hypothesis==4.5.5
 idna==2.8
 itsdangerous==1.1.0
-Jinja2==2.10
+Jinja2==2.11.3
 jsonschema==2.6.0
 lru-dict==1.1.6
 MarkupSafe==1.1.0
