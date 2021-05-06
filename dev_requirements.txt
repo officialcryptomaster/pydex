@@ -30,7 +30,7 @@ eth-utils==1.4.1
 flake8==3.7.5
 flake8-mypy==17.8.0
 Flask==1.0.2
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 Flask-SQLAlchemy==2.3.2
 hexbytes==0.1.0
 hypothesis==4.4.3
