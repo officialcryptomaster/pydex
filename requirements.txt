@@ -5,7 +5,7 @@
 0x-web3==4.8.2.1
 attrdict==2.0.1
 attrs==18.2.0
-certifi==2018.11.29
+certifi==2022.12.7
 chardet==3.0.4
 Click==7.0
 colorlog==4.0.2
